@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense, lazy } from 'react';
 import { Trophy, Camera, Play } from 'lucide-react';
 import type { Game, AppSettings } from './types/game';
 import { StoreService, INITIAL_GAMES, DEFAULT_PROFILES } from './services/storeService';
@@ -11,15 +11,10 @@ import { ToastStack } from './components/layout/ToastStack';
 import { ConsoleView } from './components/dashboard/ConsoleView';
 import { GridView } from './components/dashboard/GridView';
 import { CommandPalette } from './components/palette/CommandPalette';
-import { AddGameModal } from './components/modals/AddGameModal';
-import { SettingsModal } from './components/modals/SettingsModal';
 import { NotesDrawer } from './components/dashboard/NotesDrawer';
 import { EasterEggModal } from './components/modals/EasterEggModal';
-import { EditThemeModal } from './components/modals/EditThemeModal';
 import { ConfirmRemoveModal } from './components/modals/ConfirmRemoveModal';
-import { GameOverviewModal } from './components/dashboard/GameOverviewModal';
 import { GameIntelDrawer } from './components/dashboard/GameIntelDrawer';
-import { WhatToPlayModal } from './components/modals/WhatToPlayModal';
 import { NavigationHud } from './components/layout/NavigationHud';
 import type { GridDensity } from './components/dashboard/GridView';
 import { normalizeMediaUrl } from './utils/mediaUrl';
@@ -27,16 +22,23 @@ import type { ControllerDetails } from './utils/deviceDetector';
 import { LoginScreen } from './components/auth/LoginScreen';
 import type { UserProfile } from './types/game';
 import { InputModeToast, type InputModeToastData } from './components/layout/InputModeToast';
-import { PhysicalShelfView } from './components/dashboard/PhysicalShelfView';
-import { ModManagerModal } from './components/modals/ModManagerModal';
-import { JukeboxModal } from './components/jukebox/JukeboxModal';
-import { SaveVaultModal } from './components/modals/SaveVaultModal';
-import { ActivityHeatmapModal } from './components/modals/ActivityHeatmapModal';
-import { RetroHubModal } from './components/modals/RetroHubModal';
-import { InGameMiniHud } from './components/hud/InGameMiniHud';
 import { jukeboxEngine } from './services/jukeboxEngine';
-import { SetupWizardModal } from './components/onboarding/SetupWizardModal';
 import { hapticsService } from './services/hapticsService';
+
+// Code-split heavy views and secondary modals with React.lazy
+const PhysicalShelfView = lazy(() => import('./components/dashboard/PhysicalShelfView').then(m => ({ default: m.PhysicalShelfView })));
+const ModManagerModal = lazy(() => import('./components/modals/ModManagerModal').then(m => ({ default: m.ModManagerModal })));
+const JukeboxModal = lazy(() => import('./components/jukebox/JukeboxModal').then(m => ({ default: m.JukeboxModal })));
+const SaveVaultModal = lazy(() => import('./components/modals/SaveVaultModal').then(m => ({ default: m.SaveVaultModal })));
+const ActivityHeatmapModal = lazy(() => import('./components/modals/ActivityHeatmapModal').then(m => ({ default: m.ActivityHeatmapModal })));
+const RetroHubModal = lazy(() => import('./components/modals/RetroHubModal').then(m => ({ default: m.RetroHubModal })));
+const InGameMiniHud = lazy(() => import('./components/hud/InGameMiniHud').then(m => ({ default: m.InGameMiniHud })));
+const SetupWizardModal = lazy(() => import('./components/onboarding/SetupWizardModal').then(m => ({ default: m.SetupWizardModal })));
+const AddGameModal = lazy(() => import('./components/modals/AddGameModal').then(m => ({ default: m.AddGameModal })));
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const EditThemeModal = lazy(() => import('./components/modals/EditThemeModal').then(m => ({ default: m.EditThemeModal })));
+const GameOverviewModal = lazy(() => import('./components/dashboard/GameOverviewModal').then(m => ({ default: m.GameOverviewModal })));
+const WhatToPlayModal = lazy(() => import('./components/modals/WhatToPlayModal').then(m => ({ default: m.WhatToPlayModal })));
 
 function getRecentResumeGame(games: Game[]): Game | null {
   if (games.length === 0) return null;
@@ -1292,18 +1294,27 @@ export const App: React.FC = () => {
           onDensityChange={setGridDensity}
         />
       ) : (
-        <PhysicalShelfView
-          games={games}
-          selectedGameIndex={selectedGameIndex}
-          onSelectGame={(idx) => setSelectedGameIndex(idx)}
-          onLaunchGame={handleLaunchGame}
-          onOpenOverview={(g) => {
-            const idx = games.findIndex((x) => x.id === g.id);
-            if (idx >= 0) setSelectedGameIndex(idx);
-            setOverviewGame(g);
-          }}
-          onOpenMods={(g) => setModManagingGame(g)}
-        />
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center min-h-[400px]">
+            <div className="flex flex-col items-center gap-3 text-white/50 animate-pulse">
+              <div className="w-8 h-8 rounded-full border-2 border-[var(--game-accent)] border-t-transparent animate-spin" />
+              <span className="text-xs font-mono uppercase tracking-widest">Loading 3D Shelf...</span>
+            </div>
+          </div>
+        }>
+          <PhysicalShelfView
+            games={games}
+            selectedGameIndex={selectedGameIndex}
+            onSelectGame={(idx) => setSelectedGameIndex(idx)}
+            onLaunchGame={handleLaunchGame}
+            onOpenOverview={(g) => {
+              const idx = games.findIndex((x) => x.id === g.id);
+              if (idx >= 0) setSelectedGameIndex(idx);
+              setOverviewGame(g);
+            }}
+            onOpenMods={(g) => setModManagingGame(g)}
+          />
+        </Suspense>
       )}
 
       {/* Navigation HUD: Console Action Bar with Dynamic Platform Glyphs (Optional / Configurable) */}
@@ -1425,48 +1436,159 @@ export const App: React.FC = () => {
       {/* Controller / Keyboard Input Transition HUD Pop-up */}
       <InputModeToast toast={inputToast} onDismiss={() => setInputToast(null)} />
 
-      {/* Modals & Drawers */}
-      <GameOverviewModal
-        isOpen={overviewGame !== null}
-        game={overviewGame}
-        onClose={() => setOverviewGame(null)}
-        onLaunchGame={handleLaunchGame}
-        onUpdateGame={(updated) => {
-          handleUpdateGame(updated);
-          setOverviewGame(updated);
-        }}
-        onOpenThemeEditor={(g) => {
-          setThemeEditingGame(g);
-          setIsThemeModalOpen(true);
-          setOverviewGame(null);
-        }}
-        onOpenNotes={() => {
-          setIsNotesOpen(true);
-          setOverviewGame(null);
-        }}
-        onOpenFolder={handleOpenFolder}
-        onOpenMods={(g) => {
-          setModManagingGame(g);
-          setOverviewGame(null);
-        }}
-        onOpenSaveVault={(g) => {
-          setSaveVaultGame(g);
-          setOverviewGame(null);
-        }}
-        onTakeScreenshot={handleTakeScreenshot}
-        apiKeys={settings.apiKeys}
-      />
+      {/* Lazy Modals & Drawers */}
+      <Suspense fallback={null}>
+        <GameOverviewModal
+          isOpen={overviewGame !== null}
+          game={overviewGame}
+          onClose={() => setOverviewGame(null)}
+          onLaunchGame={handleLaunchGame}
+          onUpdateGame={(updated) => {
+            handleUpdateGame(updated);
+            setOverviewGame(updated);
+          }}
+          onOpenThemeEditor={(g) => {
+            setThemeEditingGame(g);
+            setIsThemeModalOpen(true);
+            setOverviewGame(null);
+          }}
+          onOpenNotes={() => {
+            setIsNotesOpen(true);
+            setOverviewGame(null);
+          }}
+          onOpenFolder={handleOpenFolder}
+          onOpenMods={(g) => {
+            setModManagingGame(g);
+            setOverviewGame(null);
+          }}
+          onOpenSaveVault={(g) => {
+            setSaveVaultGame(g);
+            setOverviewGame(null);
+          }}
+          onTakeScreenshot={handleTakeScreenshot}
+          apiKeys={settings.apiKeys}
+        />
 
-      {/* V3 Mod & Add-On Pack Manager Modal */}
-      <ModManagerModal
-        isOpen={modManagingGame !== null}
-        game={modManagingGame}
-        onClose={() => setModManagingGame(null)}
-        onUpdateGame={handleUpdateGame}
-        onLaunchGame={handleLaunchGame}
-      />
+        {/* V3 Mod & Add-On Pack Manager Modal */}
+        <ModManagerModal
+          isOpen={modManagingGame !== null}
+          game={modManagingGame}
+          onClose={() => setModManagingGame(null)}
+          onUpdateGame={handleUpdateGame}
+          onLaunchGame={handleLaunchGame}
+        />
 
-      {/* Modals & Drawers */}
+        {/* Astra Game Concierge & Decision Engine (What to Play / Roulette) */}
+        <WhatToPlayModal
+          isOpen={isWhatToPlayOpen}
+          onClose={() => setIsWhatToPlayOpen(false)}
+          games={games}
+          onLaunchGame={handleLaunchGame}
+          onOpenOverview={(g) => {
+            const idx = games.findIndex((x) => x.id === g.id);
+            if (idx !== -1) setSelectedGameIndex(idx);
+            setOverviewGame(g);
+            setIsWhatToPlayOpen(false);
+          }}
+          onOpenIntel={(g) => {
+            const idx = games.findIndex((x) => x.id === g.id);
+            if (idx !== -1) setSelectedGameIndex(idx);
+            setIsIntelDrawerOpen(true);
+            setIsWhatToPlayOpen(false);
+          }}
+        />
+
+        <AddGameModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddGame={handleAddGame}
+          onAddBatchGames={handleAddBatchGames}
+          apiKeys={settings.apiKeys}
+        />
+
+        <EditThemeModal
+          key={isThemeModalOpen && themeEditingGame ? themeEditingGame.id : 'theme-modal-closed'}
+          isOpen={isThemeModalOpen}
+          onClose={() => {
+            setIsThemeModalOpen(false);
+            setThemeEditingGame(null);
+          }}
+          game={themeEditingGame}
+          onSaveGame={handleUpdateGame}
+          onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
+          onRemoveGame={handleRemoveGame}
+          apiKeys={settings.apiKeys}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          onResetLibrary={handleResetLibrary}
+          games={games}
+          onUpdateGame={handleUpdateGame}
+          onBatchUpdateGames={handleBatchUpdateGames}
+          onOpenSetupWizard={() => {
+            setIsSettingsModalOpen(false);
+            setIsSetupWizardOpen(true);
+          }}
+        />
+
+        {/* Setup Wizard Onboarding Modal */}
+        <SetupWizardModal
+          isOpen={isSetupWizardOpen}
+          currentSettings={settings}
+          onComplete={(newSettings) => {
+            handleUpdateSettings({ ...settings, ...newSettings });
+            setIsSetupWizardOpen(false);
+            showToast(`✨ Realm Calibrated: ${newSettings.experienceArchetype?.toUpperCase() || 'CONSOLE'}`);
+          }}
+          onClose={() => setIsSetupWizardOpen(false)}
+        />
+
+        {/* V3 Pillar 1: Astra Jukebox & Audio Visualizer */}
+        <JukeboxModal
+          isOpen={isJukeboxOpen}
+          onClose={() => setIsJukeboxOpen(false)}
+          accentColor={games[selectedGameIndex]?.theme?.accentColor || '#2ee5ba'}
+        />
+
+        {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
+        <SaveVaultModal
+          isOpen={saveVaultGame !== null}
+          game={saveVaultGame}
+          onClose={() => setSaveVaultGame(null)}
+          onShowToast={showToast}
+        />
+
+        {/* V3 Pillar 3: Gaming Activity & Playtime Heatmap */}
+        <ActivityHeatmapModal
+          isOpen={isActivityOpen}
+          games={games}
+          onClose={() => setIsActivityOpen(false)}
+        />
+
+        {/* V3 Pillar 4: Retro & Emulation Hub */}
+        <RetroHubModal
+          isOpen={isRetroHubOpen}
+          onClose={() => setIsRetroHubOpen(false)}
+          onAddGame={handleAddGame}
+          onShowToast={showToast}
+        />
+
+        {/* V3 Pillar 5: In-Game Companion Mini-HUD */}
+        <InGameMiniHud
+          isOpen={isMiniHudOpen}
+          activeGame={games[selectedGameIndex] || null}
+          onClose={() => setIsMiniHudOpen(false)}
+          onTakeScreenshot={() => handleTakeScreenshot()}
+          onOpenJukebox={() => setIsJukeboxOpen(true)}
+          onShowToast={showToast}
+        />
+      </Suspense>
+
+      {/* Synchronous Modals & Drawers */}
       <EasterEggModal
         isOpen={isEasterEggOpen}
         onClose={() => setIsEasterEggOpen(false)}
@@ -1489,48 +1611,6 @@ export const App: React.FC = () => {
         onOpenWhatToPlay={() => setIsWhatToPlayOpen(true)}
       />
 
-      {/* Astra Game Concierge & Decision Engine (What to Play / Roulette) */}
-      <WhatToPlayModal
-        isOpen={isWhatToPlayOpen}
-        onClose={() => setIsWhatToPlayOpen(false)}
-        games={games}
-        onLaunchGame={handleLaunchGame}
-        onOpenOverview={(g) => {
-          const idx = games.findIndex((x) => x.id === g.id);
-          if (idx !== -1) setSelectedGameIndex(idx);
-          setOverviewGame(g);
-          setIsWhatToPlayOpen(false);
-        }}
-        onOpenIntel={(g) => {
-          const idx = games.findIndex((x) => x.id === g.id);
-          if (idx !== -1) setSelectedGameIndex(idx);
-          setIsIntelDrawerOpen(true);
-          setIsWhatToPlayOpen(false);
-        }}
-      />
-
-      <AddGameModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddGame={handleAddGame}
-        onAddBatchGames={handleAddBatchGames}
-        apiKeys={settings.apiKeys}
-      />
-
-      <EditThemeModal
-        key={isThemeModalOpen && themeEditingGame ? themeEditingGame.id : 'theme-modal-closed'}
-        isOpen={isThemeModalOpen}
-        onClose={() => {
-          setIsThemeModalOpen(false);
-          setThemeEditingGame(null);
-        }}
-        game={themeEditingGame}
-        onSaveGame={handleUpdateGame}
-        onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
-        onRemoveGame={handleRemoveGame}
-        apiKeys={settings.apiKeys}
-      />
-
       <ConfirmRemoveModal
         isOpen={gamePendingRemoval !== null}
         game={gamePendingRemoval}
@@ -1539,73 +1619,6 @@ export const App: React.FC = () => {
           handleRemoveGame(gameId);
           setGamePendingRemoval(null);
         }}
-      />
-
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onResetLibrary={handleResetLibrary}
-        games={games}
-        onUpdateGame={handleUpdateGame}
-        onBatchUpdateGames={handleBatchUpdateGames}
-        onOpenSetupWizard={() => {
-          setIsSettingsModalOpen(false);
-          setIsSetupWizardOpen(true);
-        }}
-      />
-
-      {/* Setup Wizard Onboarding Modal */}
-      <SetupWizardModal
-        isOpen={isSetupWizardOpen}
-        currentSettings={settings}
-        onComplete={(newSettings) => {
-          handleUpdateSettings({ ...settings, ...newSettings });
-          setIsSetupWizardOpen(false);
-          showToast(`✨ Realm Calibrated: ${newSettings.experienceArchetype?.toUpperCase() || 'CONSOLE'}`);
-        }}
-        onClose={() => setIsSetupWizardOpen(false)}
-      />
-
-      {/* V3 Pillar 1: Astra Jukebox & Audio Visualizer */}
-      <JukeboxModal
-        isOpen={isJukeboxOpen}
-        onClose={() => setIsJukeboxOpen(false)}
-        accentColor={games[selectedGameIndex]?.theme?.accentColor || '#2ee5ba'}
-      />
-
-      {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
-      <SaveVaultModal
-        isOpen={saveVaultGame !== null}
-        game={saveVaultGame}
-        onClose={() => setSaveVaultGame(null)}
-        onShowToast={showToast}
-      />
-
-      {/* V3 Pillar 3: Gaming Activity & Playtime Heatmap */}
-      <ActivityHeatmapModal
-        isOpen={isActivityOpen}
-        games={games}
-        onClose={() => setIsActivityOpen(false)}
-      />
-
-      {/* V3 Pillar 4: Retro & Emulation Hub */}
-      <RetroHubModal
-        isOpen={isRetroHubOpen}
-        onClose={() => setIsRetroHubOpen(false)}
-        onAddGame={handleAddGame}
-        onShowToast={showToast}
-      />
-
-      {/* V3 Pillar 5: In-Game Companion Mini-HUD */}
-      <InGameMiniHud
-        isOpen={isMiniHudOpen}
-        activeGame={games[selectedGameIndex] || null}
-        onClose={() => setIsMiniHudOpen(false)}
-        onTakeScreenshot={() => handleTakeScreenshot()}
-        onOpenJukebox={() => setIsJukeboxOpen(true)}
-        onShowToast={showToast}
       />
       <ToastStack />
     </div>
