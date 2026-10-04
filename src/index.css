@@ -1,0 +1,474 @@
+@import "tailwindcss";
+
+:root {
+  --game-accent: #2ee5ba;
+  --game-accent-contrast: #000000;
+  --game-glow: rgba(46, 229, 186, 0.45);
+  --global-accent: #2ee5ba;
+  --global-accent-contrast: #000000;
+  --global-glow: rgba(46, 229, 186, 0.45);
+  --global-bg-start: #071612;
+  --global-bg-end: #020705;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--global-bg-start);
+  color: #f3f4f6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Hide scrollbar for carousel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glassmorphism */
+.glass-panel {
+  background: rgba(13, 17, 28, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Active Game Glow */
+.game-glow-ring {
+  box-shadow: 0 0 25px var(--game-glow), 0 0 50px var(--game-glow);
+}
+
+/* Title bar draggable area */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Cinematic Looping Wallpaper Pan & Breathing Zoom */
+@keyframes kenburns {
+  0% {
+    transform: scale3d(1.06, 1.06, 1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale3d(1.12, 1.12, 1) translate3d(-0.8%, -0.6%, 0);
+  }
+  100% {
+    transform: scale3d(1.06, 1.06, 1) translate3d(0, 0, 0);
+  }
+}
+
+.animate-kenburns {
+  animation: kenburns 28s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Console Easing & Motion Design */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes heroEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale3d(0.98, 0.98, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+@keyframes modalIn {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.93, 0.93, 1) translate3d(0, 12px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--game-glow), 0 0 40px var(--game-glow);
+  }
+  50% {
+    box-shadow: 0 0 35px var(--game-glow), 0 0 65px var(--game-glow);
+  }
+}
+
+/* Animation Utility Classes */
+.animate-fadeIn {
+  animation: fadeIn 350ms var(--ease-smooth) both;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 450ms var(--ease-out-expo) both;
+  will-change: transform, opacity;
+}
+
+.animate-heroEnter {
+  animation: heroEnter 480ms var(--ease-out-expo) both;
+  will-change: transform, opacity;
+}
+
+.animate-modalIn {
+  animation: modalIn 380ms var(--ease-out-expo) both;
+  will-change: transform, opacity;
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-slideLeft {
+  animation: slideInRight 360ms var(--ease-out-expo) both;
+  will-change: transform, opacity;
+}
+
+@keyframes scaleUp {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.92, 0.92, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 350ms var(--ease-out-expo) both;
+  will-change: transform, opacity;
+}
+
+/* Hardware Acceleration Helpers */
+.transform-gpu {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.smooth-spring {
+  transition: all 420ms var(--ease-spring);
+  will-change: transform;
+}
+
+.smooth-expo {
+  transition: all 380ms var(--ease-out-expo);
+  will-change: transform, opacity;
+}
+
+/* ========================================================================= */
+/* ASTRA SIGNATURE DESIGN IDENTITY: PRISM, CONSTELLATION & CORE TOKENS       */
+/* ========================================================================= */
+
+/* Asymmetric Prismatic Facet Cut */
+.astra-prism-cut,
+.nexus-prism-cut {
+  clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+}
+
+.astra-prism-subtle,
+.nexus-prism-subtle {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+/* Chromatic Edge Dispersion Glow */
+.astra-chromatic-glow,
+.nexus-chromatic-glow {
+  filter: drop-shadow(-2px -2px 12px rgba(0, 240, 255, 0.45))
+          drop-shadow(2px 2px 14px rgba(255, 0, 128, 0.4))
+          drop-shadow(0 0 30px var(--game-glow, rgba(46, 229, 186, 0.45)));
+}
+
+/* Animated Specular Light Bar Sweep */
+@keyframes specularSweep {
+  0% {
+    transform: translate3d(-150%, -150%, 0) rotate(25deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  45% {
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate3d(250%, 250%, 0) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+.specular-light-sweep {
+  animation: specularSweep 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* Constellation Thread Energy Pulse */
+@keyframes constellationFlow {
+  0% {
+    stroke-dashoffset: 200;
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.4;
+  }
+}
+
+.animate-constellation {
+  stroke-dasharray: 8 16;
+  animation: constellationFlow 2.8s linear infinite;
+}
+
+/* Astra Core Polyhedral Spin & Energy Rings */
+@keyframes coreSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes corePulseRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+}
+
+.animate-core-spin {
+  animation: coreSpin 16s linear infinite;
+}
+
+.animate-core-spin-fast {
+  animation: coreSpin 5s linear infinite;
+}
+
+.animate-core-ring {
+  animation: corePulseRing 3.5s ease-in-out infinite;
+}
+
+/* Camera Shutter Flash Effect */
+@keyframes shutterFlash {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-shutterFlash {
+  animation: shutterFlash 220ms ease-out forwards;
+}
+
+/* Controller / Keyboard Input Mode Switch HUD Animations */
+@keyframes inputHUDIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -24px, 0) scale3d(0.92, 0.92, 1);
+  }
+  60% {
+    opacity: 1;
+    transform: translate3d(-50%, 3px, 0) scale3d(1.02, 1.02, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+@keyframes inputHUDOut {
+  0% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale3d(1, 1, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -18px, 0) scale3d(0.94, 0.94, 1);
+  }
+}
+
+@keyframes inputGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+  50% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 16px currentColor);
+  }
+}
+
+.animate-inputHUDIn {
+  animation: inputHUDIn 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-inputHUDOut {
+  animation: inputHUDOut 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-inputGlowPulse {
+  animation: inputGlowPulse 2s ease-in-out infinite;
+}
+
+/* Realistic 3D Disc & Dust Visuals */
+@keyframes discIdleSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes holographicSheenSweep {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    opacity: 0.85;
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 0.55;
+  }
+}
+
+@keyframes dustMoteDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate3d(4px, -6px, 10px) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(-3px, -12px, 0) scale(0.9);
+    opacity: 0.3;
+  }
+}
+
+@keyframes dustGustDisperse {
+  0% {
+    transform: scale(0.9) translate3d(0, 0, 0);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  60% {
+    transform: scale(1.3) translate3d(var(--gust-x, 20px), var(--gust-y, -30px), 60px);
+    opacity: 0.75;
+    filter: blur(2px);
+  }
+  100% {
+    transform: scale(1.8) translate3d(var(--gust-x, 50px), var(--gust-y, -80px), 120px);
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+.animate-discIdleSpin {
+  animation: discIdleSpin 16s linear infinite;
+}
+
+.animate-holoSheen {
+  animation: holographicSheenSweep 8s linear infinite;
+}
+
+.animate-dustGust {
+  animation: dustGustDisperse 900ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@theme {
+  --font-sans: var(--ui-font, "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+  --radius-lg: var(--ui-rounding, 0.5rem);
+  --radius-xl: var(--ui-rounding, 0.75rem);
+  --radius-2xl: var(--ui-rounding, 1rem);
+  --radius-3xl: var(--ui-rounding, 1.5rem);
+}
