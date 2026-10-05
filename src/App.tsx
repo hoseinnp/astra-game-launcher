@@ -25,12 +25,17 @@ import { jukeboxEngine } from './services/jukeboxEngine';
 import { GameLauncherService } from './services/GameLauncherService';
 import { hapticsService } from './services/hapticsService';
 
+import { ActivityTrackingService } from './services/ActivityTrackingService';
+import { PatternDetectionService } from './services/PatternDetectionService';
+import type { PlayPattern } from './types/Activity.types';
+
 // Code-split heavy views and secondary modals with React.lazy
 const PhysicalShelfView = lazy(() => import('./components/dashboard/PhysicalShelfView').then(m => ({ default: m.PhysicalShelfView })));
 const ModManagerModal = lazy(() => import('./components/modals/ModManagerModal').then(m => ({ default: m.ModManagerModal })));
 const JukeboxModal = lazy(() => import('./components/jukebox/JukeboxModal').then(m => ({ default: m.JukeboxModal })));
 const SaveVaultModal = lazy(() => import('./components/modals/SaveVaultModal').then(m => ({ default: m.SaveVaultModal })));
-const ActivityHeatmapModal = lazy(() => import('./components/modals/ActivityHeatmapModal').then(m => ({ default: m.ActivityHeatmapModal })));
+const ActivityDashboardModal = lazy(() => import('./modals/ActivityDashboardModal').then(m => ({ default: m.ActivityDashboardModal })));
+const SmartResumePopup = lazy(() => import('./components/SmartResumePopup').then(m => ({ default: m.SmartResumePopup })));
 const RetroHubModal = lazy(() => import('./components/modals/RetroHubModal').then(m => ({ default: m.RetroHubModal })));
 const InGameMiniHud = lazy(() => import('./components/hud/InGameMiniHud').then(m => ({ default: m.InGameMiniHud })));
 const SetupWizardModal = lazy(() => import('./components/onboarding/SetupWizardModal').then(m => ({ default: m.SetupWizardModal })));
@@ -214,6 +219,7 @@ export const App: React.FC = () => {
   const [isJukeboxOpen, setIsJukeboxOpen] = useState<boolean>(false);
   const [saveVaultGame, setSaveVaultGame] = useState<Game | null>(null);
   const [isActivityOpen, setIsActivityOpen] = useState<boolean>(false);
+  const [resumePattern, setResumePattern] = useState<PlayPattern | null>(null);
   const [isRetroHubOpen, setIsRetroHubOpen] = useState<boolean>(false);
   const [isMiniHudOpen, setIsMiniHudOpen] = useState<boolean>(false);
   const [isSetupWizardOpen, setIsSetupWizardOpen] = useState<boolean>(() => {
@@ -578,6 +584,29 @@ export const App: React.FC = () => {
 
     cacheSteamCdnMedia();
   }, [games.length]);
+
+  // V3: Startup Smart Resume pattern detection & Milestone notifications
+  useEffect(() => {
+    // 1. Listen for milestone unlocks
+    const unsubMilestone = ActivityTrackingService.onMilestoneUnlocked((milestone) => {
+      showToast(`🏆 Milestone Unlocked: ${milestone.name}!`);
+      audioEngine.playTrophy();
+    });
+
+    // 2. On app startup, analyze session history for play patterns
+    const timer = setTimeout(async () => {
+      await ActivityTrackingService.syncWithBackend();
+      const detected = PatternDetectionService.findSuggestedResume();
+      if (detected) {
+        setResumePattern(detected);
+      }
+    }, 1500);
+
+    return () => {
+      unsubMilestone();
+      clearTimeout(timer);
+    };
+  }, [showToast]);
 
   // Update Dynamic Theme and OST when active game changes or view mode changes
   useEffect(() => {
@@ -1520,12 +1549,23 @@ export const App: React.FC = () => {
           onShowToast={showToast}
         />
 
-        {/* V3 Pillar 3: Gaming Activity & Playtime Heatmap */}
-        <ActivityHeatmapModal
+        {/* V3 Pillar 3: Gaming Activity Tracking & Analytics Dashboard */}
+        <ActivityDashboardModal
           isOpen={isActivityOpen}
           games={games}
           onClose={() => setIsActivityOpen(false)}
+          accentColor={games[selectedGameIndex]?.theme?.accentColor || '#10b981'}
         />
+
+        {/* Smart Resume Popup Notification */}
+        {resumePattern && (
+          <SmartResumePopup
+            pattern={resumePattern}
+            games={games}
+            onOpenStats={() => setIsActivityOpen(true)}
+            onDismiss={() => setResumePattern(null)}
+          />
+        )}
 
         {/* V3 Pillar 4: Retro & Emulation Hub */}
         <RetroHubModal
