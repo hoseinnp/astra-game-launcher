@@ -18,11 +18,9 @@ import {
   Zap,
   Activity
 } from 'lucide-react';
-import type { ViewMode, UserProfile } from '../../types/game';
+import type { ViewMode } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { jukeboxEngine } from '../../services/jukeboxEngine';
-import { SessionTimer } from './SessionTimer';
-import { WeatherWidget } from './WeatherWidget';
 import { DeviceIcon, type ControllerDetails } from '../../utils/deviceDetector';
 import { AstraCoreIcon } from './AstraCoreIcon';
 
@@ -34,12 +32,10 @@ interface TopBarProps {
   onOpenWhatToPlay?: () => void;
   onOpenSettings: () => void;
   onOpenNotes: () => void;
-  onOpenEasterEgg?: () => void;
   onOpenJukebox?: () => void;
   onOpenActivity?: () => void;
   onOpenRetroHub?: () => void;
   onOpenMiniHud?: () => void;
-  onTimeExpired: () => void;
   sfxEnabled: boolean;
   onToggleMute: () => void;
   activeInputMode?: 'keyboard' | 'controller';
@@ -47,8 +43,6 @@ interface TopBarProps {
   gamepadConnected: boolean;
   gamepadName: string;
   hasRecentlyChangedInput?: boolean;
-  currentUser: UserProfile | null;
-  onSwitchUser?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -59,23 +53,18 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenWhatToPlay,
   onOpenSettings,
   onOpenNotes,
-  onOpenEasterEgg,
   onOpenJukebox,
   onOpenActivity,
   onOpenRetroHub,
   onOpenMiniHud,
-  onTimeExpired,
   sfxEnabled,
   onToggleMute,
   activeInputMode = 'keyboard',
   controllerDetails,
   gamepadConnected,
   gamepadName,
-  hasRecentlyChangedInput = false,
-  currentUser,
-  onSwitchUser
+  hasRecentlyChangedInput = false
 }) => {
-  const [logoClicks, setLogoClicks] = useState(0);
   const [timeStr, setTimeStr] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [jukeboxPlaying, setJukeboxPlaying] = useState(false);
@@ -123,23 +112,12 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Left: Brand & Mode Switcher */}
       <div className="flex items-center gap-4 no-drag">
         <div
-          onClick={() => {
-            const next = logoClicks + 1;
-            setLogoClicks(next);
-            audioEngine.playHover();
-            if (next >= 5) {
-              setLogoClicks(0);
-              audioEngine.playLaunch();
-              if (onOpenEasterEgg) onOpenEasterEgg();
-            }
-          }}
-          title="ASTRA (Click 5 times for Easter Egg)"
-          className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity group"
+          title="ASTRA OS 3.0"
+          className="flex items-center gap-2.5 group cursor-default"
         >
           <AstraCoreIcon
             size="sm"
-            isEnergetic={logoClicks > 0}
-            className="transition-transform group-hover:scale-110"
+            className="transition-transform group-hover:scale-105"
           />
           <div className="flex flex-col select-none">
             <span className="font-black tracking-widest text-sm uppercase text-white drop-shadow-[0_0_10px_var(--game-glow)]">
@@ -150,27 +128,6 @@ export const TopBar: React.FC<TopBarProps> = ({
             </span>
           </div>
         </div>
-
-        {/* Active User Profile Badge */}
-        {currentUser && (
-          <button
-            onClick={() => {
-              if (onSwitchUser) {
-                audioEngine.playSelect();
-                onSwitchUser();
-              }
-            }}
-            title={`Active Profile: ${currentUser.name} (${currentUser.tag || 'Host'})\nClick to switch profile or log out`}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-full glass-pill border-white/15 hover:border-white/35 hover:bg-white/10 transition-all cursor-pointer group"
-          >
-            <img
-              src={currentUser.avatarUrl}
-              alt={currentUser.name}
-              className="w-5 h-5 rounded-full object-cover ring-1 ring-[var(--game-accent)] group-hover:scale-105 transition-transform"
-            />
-            <span className="text-xs font-bold text-white/90 group-hover:text-white">{currentUser.name}</span>
-          </button>
-        )}
 
         {/* View Mode Toggle Pill (Console / Grid / 3D Physical Shelf) */}
         <button
@@ -201,9 +158,13 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
       </div>
 
-      {/* Center: Live Clock, Date & Weather Widget (Merged Pill with Vertical Divider) */}
+      {/* Center: Live Digital Clock & Calendar Date */}
       <div className="flex items-center text-white/70 text-xs tracking-wider no-drag">
-        <WeatherWidget timeStr={timeStr} dateStr={dateStr} />
+        <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-pill border border-white/10 font-mono text-xs shadow-inner">
+          <span className="font-bold text-white tracking-widest">{timeStr}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--game-accent,#2ee5ba)] shadow-[0_0_8px_var(--game-accent,#2ee5ba)]" />
+          <span className="text-white/60 text-[11px] font-medium tracking-wide uppercase">{dateStr}</span>
+        </div>
       </div>
 
       {/* Right: Quick Tools & Window Controls */}
@@ -265,9 +226,6 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
           )}
         </div>
-
-        {/* Gaming Session Timer */}
-        <SessionTimer onTimeExpired={onTimeExpired} />
 
         {/* Notes & Cheats Drawer */}
         <button

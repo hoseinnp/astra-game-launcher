@@ -17,16 +17,20 @@ contextBridge.exposeInMainWorld('api', {
   pickImage: () => ipcRenderer.invoke('dialog:pick-image'),
   pickAudio: () => ipcRenderer.invoke('dialog:pick-audio'),
   pickVideo: () => ipcRenderer.invoke('dialog:pick-video'),
-  pickFolder: () => ipcRenderer.invoke('dialog:pick-folder'),
+  pickFolder: (options) => ipcRenderer.invoke('dialog:pick-folder', options),
   getExeVersion: (exePath) => ipcRenderer.invoke('game:get-exe-version', exePath),
+  checkGameVersion: (exePath) => ipcRenderer.invoke('game:check-version', exePath),
 
   // Game execution & Location
   launchGame: (game) => ipcRenderer.invoke('game:launch', game),
   openGameFolder: (game) => ipcRenderer.invoke('game:open-folder', game),
+  createDesktopShortcut: (game) => ipcRenderer.invoke('game:create-shortcut', game),
+  createAppDesktopShortcut: () => ipcRenderer.invoke('app:create-shortcut'),
 
   // Scanners
   scanFolder: (dirPath, options) => ipcRenderer.invoke('scanner:folder', dirPath, options),
   scanSteam: () => ipcRenderer.invoke('scanner:steam'),
+  scanPlatformGames: (platform) => ipcRenderer.invoke('scanner:platforms', platform),
 
   // Persistence
   loadData: () => ipcRenderer.invoke('store:load'),
@@ -68,12 +72,22 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('game:session-ended', handler);
   },
 
-  // Save Vault APIs
+  // Save Vault & Auto-Backup APIs
   scanSaveLocations: (gameId, gameTitle) => ipcRenderer.invoke('savevault:scan-locations', gameId, gameTitle),
   createSaveSnapshot: (gameId, gameTitle, note, isAuto) => ipcRenderer.invoke('savevault:create-snapshot', { gameId, gameTitle, note, isAuto }),
   listSaveSnapshots: (gameId) => ipcRenderer.invoke('savevault:list-snapshots', gameId),
   restoreSaveSnapshot: (gameId, snapshotId) => ipcRenderer.invoke('savevault:restore-snapshot', { gameId, snapshotId }),
-  openSaveDirectory: (gameId) => ipcRenderer.invoke('savevault:open-folder', gameId),
+  listBackups: (gameId, customStorage) => ipcRenderer.invoke('savevault:list-backups', gameId, customStorage),
+  createBackup: (params) => ipcRenderer.invoke('savevault:create-backup', params),
+  restoreBackup: (params) => ipcRenderer.invoke('savevault:restore-backup', params),
+  deleteBackup: (params) => ipcRenderer.invoke('savevault:delete-backup', params),
+  pickSaveStorageFolder: () => ipcRenderer.invoke('savevault:pick-storage-folder'),
+  openSaveDirectory: (gameId, customStorage) => ipcRenderer.invoke('savevault:open-folder', gameId, customStorage),
+  onSaveVaultProgress: (callback) => {
+    const handler = (_event, info) => callback(info);
+    ipcRenderer.on('savevault:progress', handler);
+    return () => ipcRenderer.removeListener('savevault:progress', handler);
+  },
 
   // Activity History APIs
   getActivityLog: () => ipcRenderer.invoke('activity:get-log'),

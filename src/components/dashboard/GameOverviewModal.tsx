@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X, Play, Trophy, Image, Settings, Folder, Clock, Star,
   Award, CheckCircle2, Circle, Plus, Sparkles, ChevronLeft, ChevronRight,
-  Shield, Bookmark, Timer, Camera, Upload, Trash2, FolderOpen, Quote, Layers
+  Shield, Bookmark, Timer, Camera, Upload, Trash2, FolderOpen, Quote, Layers,
+  Eye, EyeOff, Terminal, RefreshCw, Monitor
 } from 'lucide-react';
 import type { Game, GameCollection, ProviderApiKeys } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
@@ -10,6 +11,7 @@ import { AchievementEngine } from '../../services/achievementEngine';
 import { ArtworkService } from '../../services/artworkService';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import { ThemeEngine } from '../../services/themeEngine';
+import { LaunchArgumentsService } from '../../services/launchArgumentsService';
 
 interface GameOverviewModalProps {
   isOpen: boolean;
@@ -48,6 +50,78 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
   const [newTrophyType, setNewTrophyType] = useState<'bronze' | 'silver' | 'gold' | 'platinum'>('bronze');
   const [showAddTrophy, setShowAddTrophy] = useState(false);
   const checkedRef = useRef<Set<string>>(new Set());
+
+  // Desktop Shortcut State
+  const [shortcutStatus, setShortcutStatus] = useState<string>('');
+  const [isCreatingShortcut, setIsCreatingShortcut] = useState(false);
+
+  const handleCreateShortcut = async () => {
+    if (!game || !window.api?.createDesktopShortcut) return;
+    setIsCreatingShortcut(true);
+    audioEngine.playSelect();
+    try {
+      const res = await window.api.createDesktopShortcut(game);
+      if (res.success) {
+        setShortcutStatus('✓ Added!');
+        setTimeout(() => setShortcutStatus(''), 3000);
+      } else {
+        setShortcutStatus('Failed');
+        setTimeout(() => setShortcutStatus(''), 3000);
+      }
+    } catch {
+      setShortcutStatus('Failed');
+      setTimeout(() => setShortcutStatus(''), 3000);
+    } finally {
+      setIsCreatingShortcut(false);
+    }
+  };
+
+  // Launch Arguments State
+  const [currentArgs, setCurrentArgs] = useState(game?.launchArguments || '');
+  useEffect(() => {
+    setCurrentArgs(game?.launchArguments || '');
+  }, [game?.id, game?.launchArguments]);
+
+  // Detected Smart Launch Presets
+  const smartLaunchInfo = useMemo(() => {
+    return game ? LaunchArgumentsService.detectSmartPresets(game) : null;
+  }, [game?.title, game?.executablePath, game?.workingDirectory]);
+
+  // Executable Disk & Version Status
+  const [diskVersionInfo, setDiskVersionInfo] = useState<{
+    checking: boolean;
+    version: string | null;
+    lastModified: string | null;
+    exists: boolean;
+  }>({ checking: false, version: null, lastModified: null, exists: true });
+
+  const handleCheckDiskVersion = async () => {
+    if (!game?.executablePath || !window.api?.checkGameVersion) return;
+    setDiskVersionInfo((prev) => ({ ...prev, checking: true }));
+    try {
+      const res = await window.api.checkGameVersion(game.executablePath);
+      setDiskVersionInfo({
+        checking: false,
+        version: res.version,
+        lastModified: res.lastModified,
+        exists: res.exists
+      });
+      if (res.version && res.version !== game.version) {
+        onUpdateGame({
+          ...game,
+          version: res.version
+        });
+      }
+    } catch {
+      setDiskVersionInfo((prev) => ({ ...prev, checking: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && game?.executablePath) {
+      handleCheckDiskVersion();
+    }
+  }, [isOpen, game?.id]);
 
   // Initialize and evaluate milestones whenever the modal opens for this game
   useEffect(() => {
@@ -344,6 +418,39 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                 <Folder className="w-4 h-4" />
               </button>
             )}
+
+            {/* Hide / Unhide Game from Library */}
+            <button
+              onClick={() => {
+                audioEngine.playSelect();
+                const updated = { ...game, hidden: !game.hidden };
+                onUpdateGame(updated);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all ${
+                game.hidden
+                  ? 'text-amber-300 border-amber-500/40 bg-amber-500/10'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              title={game.hidden ? 'Unhide this game from library' : 'Hide this game from library without deleting'}
+            >
+              {game.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              <span>{game.hidden ? 'Hidden' : 'Hide'}</span>
+            </button>
+
+            {/* Create Desktop Shortcut */}
+            <button
+              onClick={handleCreateShortcut}
+              disabled={isCreatingShortcut}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all ${
+                shortcutStatus === '✓ Added!'
+                  ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
+                  : 'text-white/70 hover:text-white hover:border-white/30'
+              }`}
+              title="Create a Windows Desktop Shortcut for this game"
+            >
+              <Monitor className="w-3.5 h-3.5 text-sky-400" />
+              <span>{shortcutStatus || 'Shortcut'}</span>
+            </button>
           </div>
 
           {/* Navigation Tabs */}
@@ -432,28 +539,113 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                   </div>
                 </div>
 
-                {/* Compatibility Quick Summary */}
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-white">
-                    <Shield className="w-4 h-4 text-[var(--game-accent)]" />
-                    <span>Launch & Compatibility Configuration</span>
+                {/* Executable & Disk Version Verification */}
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <Shield className="w-4 h-4 text-[var(--game-accent)]" />
+                      <span>Executable & Disk Version Check</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCheckDiskVersion}
+                      disabled={diskVersionInfo.checking}
+                      className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--game-accent)] hover:underline cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${diskVersionInfo.checking ? 'animate-spin' : ''}`} />
+                      <span>{diskVersionInfo.checking ? 'Checking...' : 'Check Disk'}</span>
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-white/70">
-                    <span className="px-2 py-1 rounded bg-white/10 font-mono text-[11px]">
-                      Admin: {game.compatibility?.runAsAdmin ? 'Elevated' : 'Standard'}
-                    </span>
-                    <span className="px-2 py-1 rounded bg-white/10 font-mono text-[11px]">
-                      API: {game.compatibility?.directX?.toUpperCase() || 'Default'}
-                    </span>
-                    <span className="px-2 py-1 rounded bg-white/10 font-mono text-[11px]">
-                      Display: {game.compatibility?.displayMode || 'Fullscreen'}
-                    </span>
-                    {game.compatibility?.resolution && (
-                      <span className="px-2 py-1 rounded bg-white/10 font-mono text-[11px]">
-                        Res: {game.compatibility.resolution}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                      <span className="text-[10px] text-white/40 block font-mono">FILE VERSION</span>
+                      <span className="font-mono font-bold text-white text-[11px] mt-0.5 block truncate">
+                        {game.version || diskVersionInfo.version || 'Version info unparsed'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                      <span className="text-[10px] text-white/40 block font-mono">DISK STATUS</span>
+                      <span className="font-mono font-bold text-[11px] mt-0.5 block truncate text-emerald-400">
+                        {diskVersionInfo.exists ? '✓ Installed & Ready on Disk' : '⚠ File missing on disk'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] font-mono text-white/40 truncate bg-black/30 p-2 rounded-lg">
+                    {game.executablePath}
+                  </div>
+                </div>
+
+                {/* Launch Arguments & Smart Engine Presets */}
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <Terminal className="w-4 h-4 text-[var(--game-accent)]" />
+                      <span>Launch Arguments & Compatibility Presets</span>
+                    </div>
+                    {smartLaunchInfo && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--game-accent)]/15 text-[var(--game-accent)] border border-[var(--game-accent)]/30 font-semibold">
+                        ⚡ {smartLaunchInfo.engineName}
                       </span>
                     )}
                   </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={currentArgs}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCurrentArgs(val);
+                        onUpdateGame({
+                          ...game,
+                          launchArguments: val
+                        });
+                      }}
+                      placeholder="e.g. -fullscreen -novid -dx11 --launcher-skip"
+                      className="flex-1 px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white font-mono focus:outline-none focus:border-[var(--game-accent)]"
+                    />
+                  </div>
+
+                  {smartLaunchInfo?.recommendedPresets && smartLaunchInfo.recommendedPresets.length > 0 && (
+                    <div>
+                      <span className="text-[10px] text-white/50 block mb-1.5 font-medium">
+                        Smart Presets for {smartLaunchInfo.engineName} (click to toggle argument):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {smartLaunchInfo.recommendedPresets.map((preset) => {
+                          const isApplied = currentArgs.includes(preset.arg);
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                audioEngine.playSelect();
+                                const newArgs = isApplied
+                                  ? LaunchArgumentsService.removeArgument(currentArgs, preset.arg)
+                                  : LaunchArgumentsService.appendArgument(currentArgs, preset.arg);
+                                setCurrentArgs(newArgs);
+                                onUpdateGame({
+                                  ...game,
+                                  launchArguments: newArgs
+                                });
+                              }}
+                              title={preset.description}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                isApplied
+                                  ? 'bg-[var(--game-accent)] text-black shadow-sm'
+                                  : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white border border-white/10'
+                              }`}
+                            >
+                              <span>{preset.label}</span>
+                              <span className="text-[9px] opacity-75">({preset.arg})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -2,8 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, globalShortcut } 
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { spawn, execFile } = require('child_process');
+const { spawn, execFile, spawnSync } = require('child_process');
 const net = require('net');
+const { registerSaveVaultIpc } = require('./ipc/SaveVaultIpc.cjs');
 
 let mainWindow = null;
 const runningGames = new Map();
@@ -147,32 +148,31 @@ function createWindow() {
   } else if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    const http = require('http');
-    const req = http.get('http://127.0.0.1:5173', () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
+    let hasLoaded = false;
+    const safeLoad = (isDevServer) => {
+      if (hasLoaded || !mainWindow || mainWindow.isDestroyed()) return;
+      hasLoaded = true;
+      if (isDevServer) {
+        mainWindow.loadURL('http://127.0.0.1:5173');
+      } else if (fs.existsSync(distPath)) {
+        mainWindow.loadFile(distPath);
+      } else {
         mainWindow.loadURL('http://127.0.0.1:5173');
       }
+    };
+
+    const http = require('http');
+    const req = http.get('http://127.0.0.1:5173', () => {
+      safeLoad(true);
     });
 
-    req.setTimeout(300, () => {
-      req.destroy();
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        if (fs.existsSync(distPath)) {
-          mainWindow.loadFile(distPath);
-        } else {
-          mainWindow.loadURL('http://127.0.0.1:5173');
-        }
-      }
+    req.setTimeout(400, () => {
+      try { req.destroy(); } catch {}
+      safeLoad(false);
     });
 
     req.on('error', () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        if (fs.existsSync(distPath)) {
-          mainWindow.loadFile(distPath);
-        } else {
-          mainWindow.loadURL('http://127.0.0.1:5173');
-        }
-      }
+      safeLoad(false);
     });
   }
 
@@ -302,6 +302,24 @@ function getExeVersion(filePath) {
 
 ipcMain.handle('game:get-exe-version', async (_event, exePath) => {
   return await getExeVersion(exePath);
+});
+
+ipcMain.handle('game:check-version', async (_event, exePath) => {
+  if (!exePath || !fs.existsSync(exePath)) {
+    return { exists: false, version: null, lastModified: null, fileSizeBytes: 0 };
+  }
+  try {
+    const stats = fs.statSync(exePath);
+    const version = await getExeVersion(exePath);
+    return {
+      exists: true,
+      version: version || null,
+      lastModified: stats.mtime.toISOString(),
+      fileSizeBytes: stats.size
+    };
+  } catch (err) {
+    return { exists: false, version: null, lastModified: null, fileSizeBytes: 0 };
+  }
 });
 
 // Storage handlers
@@ -476,14 +494,18 @@ ipcMain.handle('dialog:pick-video', async () => {
   return result.filePaths[0];
 });
 
-ipcMain.handle('dialog:pick-folder', async () => {
+ipcMain.handle('dialog:pick-folder', async (_event, options = {}) => {
   if (!mainWindow) return null;
+  const properties = ['openDirectory'];
+  if (options && options.multi) {
+    properties.push('multiSelections');
+  }
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Select Games Directory to Scan',
-    properties: ['openDirectory']
+    properties
   });
   if (result.canceled || result.filePaths.length === 0) return null;
-  return result.filePaths[0];
+  return options && options.multi ? result.filePaths : result.filePaths[0];
 });
 
 // Fallback process monitor for elevated, shell-launched, or Steam games
@@ -590,13 +612,26 @@ function getSteamGameExeName(rawAppId, gameTitle) {
 // Game Launcher & Process Monitor
 ipcMain.handle('game:launch', async (_event, game) => {
   try {
-    const isSteamUri = game.executablePath && game.executablePath.startsWith('steam://');
-    if (isSteamUri) {
-      shell.openExternal(game.executablePath);
+    const isProtocolUri = game.executablePath && /^(steam|com\.epicgames\.launcher|uplay|origin|ea):\/\//i.test(game.executablePath);
+    const rawArgs = (game.launchArguments || game.args || '').trim();
+
+    if (isProtocolUri) {
+      let launchUri = game.executablePath;
+      if (rawArgs && /^steam:\/\/run\/\d+/i.test(launchUri) && !launchUri.includes('//')) {
+        launchUri = `${launchUri}//${rawArgs}`;
+      }
+      shell.openExternal(launchUri);
       const startTime = Date.now();
+      const platformLabel = game.type === 'steam' ? 'Steam'
+        : game.type === 'epic' ? 'Epic Games'
+        : game.type === 'ubisoft' ? 'Ubisoft Connect'
+        : game.type === 'ea' ? 'EA App'
+        : game.type === 'gog' ? 'GOG'
+        : 'Launcher';
+
       discordRpc.setActivity({
         details: game.title,
-        state: game.genres && game.genres.length > 0 ? game.genres.slice(0, 2).join(', ') : 'Playing on Steam',
+        state: game.genres && game.genres.length > 0 ? game.genres.slice(0, 2).join(', ') : `Playing on ${platformLabel}`,
         timestamps: { start: Math.floor(startTime / 1000) },
         assets: {
           large_image: 'astra_logo',
@@ -605,12 +640,15 @@ ipcMain.handle('game:launch', async (_event, game) => {
       });
       runningGames.set(game.id, { startTime });
 
-      // Track Steam game session via process monitor
-      const rawAppId = game.executablePath.replace(/^steam:\/\/(run|rungameid)\//i, '').replace(/[/?#].*$/, '');
-      const steamExe = getSteamGameExeName(rawAppId, game.title);
-      monitorProcessByName(game.id, steamExe, startTime);
+      // Track game session via process monitor if possible
+      let trackedExe = (game.title.replace(/[^a-zA-Z0-9]/g, '') + '.exe').toLowerCase();
+      if (game.executablePath.startsWith('steam://')) {
+        const rawAppId = game.executablePath.replace(/^steam:\/\/(run|rungameid)\//i, '').replace(/[/?#].*$/, '');
+        trackedExe = getSteamGameExeName(rawAppId, game.title);
+      }
+      monitorProcessByName(game.id, trackedExe, startTime);
 
-      return { success: true, mode: 'steam' };
+      return { success: true, mode: game.type || 'protocol' };
     }
 
     if (!fs.existsSync(game.executablePath)) {
@@ -622,7 +660,8 @@ ipcMain.handle('game:launch', async (_event, game) => {
       : path.dirname(game.executablePath);
 
     // Merge custom launch arguments with compatibility presets
-    let args = game.launchArguments ? game.launchArguments.trim().split(/\s+/).filter(Boolean) : [];
+    const rawLaunchArgs = (game.launchArguments || game.args || '').trim();
+    let args = rawLaunchArgs ? rawLaunchArgs.split(/\s+/).filter(Boolean) : [];
     if (game.compatibility) {
       const { displayMode, directX, resolution } = game.compatibility;
       if (displayMode === 'fullscreen' && !args.includes('-fullscreen')) args.push('-fullscreen');
@@ -808,10 +847,160 @@ ipcMain.handle('game:open-folder', async (_event, game) => {
   return { success: false, error: 'Game folder not found on disk.' };
 });
 
+// Helper to create a Windows .lnk shortcut using shell.writeShortcutLink or PowerShell fallback
+function createWindowsShortcut(shortcutPath, details) {
+  try {
+    if (typeof shell.writeShortcutLink === 'function') {
+      const ok = shell.writeShortcutLink(shortcutPath, 'create', {
+        target: details.target,
+        args: details.args || '',
+        cwd: details.cwd || path.dirname(details.target),
+        description: details.description || '',
+        icon: details.icon || details.target,
+        iconIndex: details.iconIndex || 0
+      });
+      if (ok && fs.existsSync(shortcutPath)) return true;
+    }
+  } catch (err) {
+    console.warn('[Shortcut] shell.writeShortcutLink error, trying PowerShell fallback:', err.message);
+  }
+
+  // PowerShell WScript.Shell Fallback
+  try {
+    const esc = (s) => (s || '').replace(/'/g, "''");
+    const target = esc(details.target);
+    const args = esc(details.args || '');
+    const cwd = esc(details.cwd || path.dirname(details.target));
+    const icon = esc(details.icon || details.target);
+    const desc = esc(details.description || '');
+    const scPath = esc(shortcutPath);
+
+    const psCommand = [
+      `$Wsh = New-Object -ComObject WScript.Shell;`,
+      `$Sc = $Wsh.CreateShortcut('${scPath}');`,
+      `$Sc.TargetPath = '${target}';`,
+      `$Sc.Arguments = '${args}';`,
+      `$Sc.WorkingDirectory = '${cwd}';`,
+      `$Sc.IconLocation = '${icon},0';`,
+      `$Sc.Description = '${desc}';`,
+      `$Sc.Save();`
+    ].join(' ');
+
+    spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psCommand], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 5000
+    });
+
+    return fs.existsSync(shortcutPath);
+  } catch (psErr) {
+    console.error('[Shortcut] PowerShell fallback failed:', psErr.message);
+    return false;
+  }
+}
+
+// Create Desktop Shortcut for Game
+ipcMain.handle('game:create-shortcut', async (_event, game) => {
+  if (!game || !game.title) {
+    return { success: false, error: 'No game details provided.' };
+  }
+
+  try {
+    const desktopDir = app.getPath('desktop');
+    if (!fs.existsSync(desktopDir)) {
+      return { success: false, error: 'Desktop folder not found.' };
+    }
+
+    const cleanTitle = game.title.replace(/[\\/:*?"<>|]/g, '').trim() || 'Game';
+
+    // 1. Steam Game (.url shortcut)
+    if (game.type === 'steam' || (game.executablePath && game.executablePath.startsWith('steam://'))) {
+      const rawAppId = game.executablePath
+        ? game.executablePath.replace(/^steam:\/\/(run|rungameid)\//i, '').replace(/[/?#].*$/, '')
+        : game.id.replace('steam-', '');
+
+      const shortcutPath = path.join(desktopDir, `${cleanTitle}.url`);
+      const steamUrl = `steam://run/${rawAppId}`;
+
+      // Check if we can locate an icon for the Steam game
+      let iconFile = '';
+      try {
+        const info = getSteamGameInstallDir(rawAppId);
+        if (info && info.gameDir) {
+          const files = fs.readdirSync(info.gameDir);
+          const exe = files.find((f) => f.toLowerCase().endsWith('.exe'));
+          if (exe) iconFile = path.join(info.gameDir, exe);
+        }
+      } catch {}
+
+      let content = `[InternetShortcut]\r\nURL=${steamUrl}\r\n`;
+      if (iconFile) {
+        content += `IconIndex=0\r\nIconFile=${iconFile}\r\n`;
+      }
+
+      fs.writeFileSync(shortcutPath, content, 'utf8');
+      return { success: true, path: shortcutPath };
+    }
+
+    // 2. Standalone Executable (.lnk shortcut)
+    if (!game.executablePath || !fs.existsSync(game.executablePath)) {
+      return { success: false, error: 'Game executable not found on disk.' };
+    }
+
+    const shortcutPath = path.join(desktopDir, `${cleanTitle}.lnk`);
+    const created = createWindowsShortcut(shortcutPath, {
+      target: game.executablePath,
+      args: game.launchArguments || game.args || '',
+      cwd: game.workingDirectory || path.dirname(game.executablePath),
+      description: `Play ${game.title}`,
+      icon: game.executablePath
+    });
+
+    if (created && fs.existsSync(shortcutPath)) {
+      return { success: true, path: shortcutPath };
+    } else {
+      return { success: false, error: 'Failed to create shortcut file on Desktop.' };
+    }
+  } catch (err) {
+    console.error('[Shortcut] Error creating desktop shortcut:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Create Desktop Shortcut for Astra Launcher itself
+ipcMain.handle('app:create-shortcut', async () => {
+  try {
+    const desktopDir = app.getPath('desktop');
+    const shortcutPath = path.join(desktopDir, 'Astra Launcher.lnk');
+    const target = process.execPath;
+    const isPackaged = app.isPackaged;
+    const appPath = app.getAppPath();
+    const args = isPackaged ? '' : `"${appPath}"`;
+    const cwd = isPackaged ? path.dirname(target) : appPath;
+
+    const created = createWindowsShortcut(shortcutPath, {
+      target,
+      args,
+      cwd,
+      description: 'Astra Game Launcher',
+      icon: target
+    });
+
+    if (created && fs.existsSync(shortcutPath)) {
+      return { success: true, path: shortcutPath };
+    } else {
+      return { success: false, error: 'Failed to create Astra Launcher desktop shortcut.' };
+    }
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 // Standalone Directory Scanner with Smart Game Filtering
 ipcMain.handle('scanner:folder', async (_event, rootDir, options = {}) => {
   const smartFilter = options.smartFilter !== false;
-  if (!rootDir || !fs.existsSync(rootDir)) return [];
+  const targetDirs = Array.isArray(rootDir) ? rootDir.filter(Boolean) : [rootDir].filter(Boolean);
+  if (targetDirs.length === 0) return [];
 
   const JUNK_EXE_REGEX = /^(unins\d*|uninstall|installer|setup|update|updater|patch|patcher|crash|crashpad|crashreporter|unitycrashhandler\d*|errorreporter|feedback|telemetry|dxsetup|dxwebsetup|vcredist[^.]*|vc_redist[^.]*|dotnetfx[^.]*|easyanticheat[^.]*|battleye[^.]*|beservice|eac_launcher|activation|register|benchmark|diagnostics|support|repair|config|configuration|settings|option|tool|editor|server|dedicated|helper|cefsubprocess|nw|node|electron)$/i;
 
@@ -880,36 +1069,71 @@ ipcMain.handle('scanner:folder', async (_event, rootDir, options = {}) => {
     return score;
   }
 
-  if (!smartFilter) {
-    const all = findExecutables(rootDir, 0, 3);
-    return all.map((e) => ({
-      title: e.baseName.replace(/[-_]/g, ' '),
-      executablePath: e.path,
-      directory: e.directory,
-      sizeMB: (e.size / (1024 * 1024)).toFixed(1)
-    }));
-  }
+  const allResults = [];
+  const seenPaths = new Set();
 
-  let topEntries = [];
-  try {
-    topEntries = fs.readdirSync(rootDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+  for (const currentRoot of targetDirs) {
+    if (!currentRoot || !fs.existsSync(currentRoot)) continue;
 
-  const subDirs = topEntries.filter((e) => e.isDirectory() && !e.name.startsWith('.') && !JUNK_FOLDERS.has(e.name.toLowerCase()));
-  const results = [];
+    if (!smartFilter) {
+      const all = findExecutables(currentRoot, 0, 3);
+      for (const e of all) {
+        if (!seenPaths.has(e.path)) {
+          seenPaths.add(e.path);
+          allResults.push({
+            title: e.baseName.replace(/[-_]/g, ' '),
+            executablePath: e.path,
+            directory: e.directory,
+            sizeMB: (e.size / (1024 * 1024)).toFixed(1)
+          });
+        }
+      }
+      continue;
+    }
 
-  if (subDirs.length > 0) {
-    for (const sub of subDirs) {
-      const gameDirPath = path.join(rootDir, sub.name);
-      const candidates = findExecutables(gameDirPath, 0, 3);
-      if (candidates.length > 0) {
-        candidates.sort((a, b) => scoreExecutable(b, sub.name) - scoreExecutable(a, sub.name));
-        const best = candidates[0];
+    let topEntries = [];
+    try {
+      topEntries = fs.readdirSync(currentRoot, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    const subDirs = topEntries.filter((e) => e.isDirectory() && !e.name.startsWith('.') && !JUNK_FOLDERS.has(e.name.toLowerCase()));
+    let foundInDir = false;
+
+    if (subDirs.length > 0) {
+      for (const sub of subDirs) {
+        const gameDirPath = path.join(currentRoot, sub.name);
+        const candidates = findExecutables(gameDirPath, 0, 3);
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => scoreExecutable(b, sub.name) - scoreExecutable(a, sub.name));
+          const best = candidates[0];
+          if (!seenPaths.has(best.path)) {
+            seenPaths.add(best.path);
+            const version = await getExeVersion(best.path);
+            allResults.push({
+              title: sub.name.replace(/[-_]/g, ' '),
+              executablePath: best.path,
+              directory: best.directory,
+              sizeMB: (best.size / (1024 * 1024)).toFixed(1),
+              version: version || undefined
+            });
+            foundInDir = true;
+          }
+        }
+      }
+    }
+
+    const rootCandidates = findExecutables(currentRoot, 0, 1);
+    if (!foundInDir && rootCandidates.length > 0) {
+      const folderName = path.basename(currentRoot);
+      rootCandidates.sort((a, b) => scoreExecutable(b, folderName) - scoreExecutable(a, folderName));
+      const best = rootCandidates[0];
+      if (!seenPaths.has(best.path)) {
+        seenPaths.add(best.path);
         const version = await getExeVersion(best.path);
-        results.push({
-          title: sub.name.replace(/[-_]/g, ' '),
+        allResults.push({
+          title: folderName.replace(/[-_]/g, ' '),
           executablePath: best.path,
           directory: best.directory,
           sizeMB: (best.size / (1024 * 1024)).toFixed(1),
@@ -919,22 +1143,7 @@ ipcMain.handle('scanner:folder', async (_event, rootDir, options = {}) => {
     }
   }
 
-  const rootCandidates = findExecutables(rootDir, 0, 1);
-  if (results.length === 0 && rootCandidates.length > 0) {
-    const folderName = path.basename(rootDir);
-    rootCandidates.sort((a, b) => scoreExecutable(b, folderName) - scoreExecutable(a, folderName));
-    const best = rootCandidates[0];
-    const version = await getExeVersion(best.path);
-    results.push({
-      title: folderName.replace(/[-_]/g, ' '),
-      executablePath: best.path,
-      directory: best.directory,
-      sizeMB: (best.size / (1024 * 1024)).toFixed(1),
-      version: version || undefined
-    });
-  }
-
-  return results;
+  return allResults;
 });
 
 // Steam Auto-Discovery
@@ -1018,6 +1227,446 @@ ipcMain.handle('scanner:steam', async () => {
   }
 
   return steamGames;
+});
+
+// Windows Registry Query Helper for Native Launcher Detection
+function queryWindowsRegistry(regPath) {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve('');
+    execFile('reg', ['query', regPath, '/s'], { timeout: 6000 }, (err, stdout) => {
+      resolve(err ? '' : stdout || '');
+    });
+  });
+}
+
+// Drive letter enumeration (C:\ through Z:\)
+function getSystemDrives() {
+  const drives = [];
+  for (let c = 67; c <= 90; c++) {
+    const d = String.fromCharCode(c) + ':\\';
+    try {
+      if (fs.existsSync(d)) drives.push(d);
+    } catch {}
+  }
+  return drives.length > 0 ? drives : ['C:\\'];
+}
+
+// Helper to find prime game executable inside an install directory
+function findBestExecutableInDir(dirPath, title = '') {
+  if (!dirPath || !fs.existsSync(dirPath)) return null;
+
+  const JUNK_EXE = /^(unins\d*|uninstall|installer|setup|update|updater|patch|patcher|crash|crashpad|crashreporter|unitycrashhandler\d*|errorreporter|feedback|telemetry|dxsetup|vcredist[^.]*|vc_redist[^.]*|easyanticheat[^.]*|battleye[^.]*|beservice|eac_launcher|activation|register|benchmark|support|repair|helper|cefsubprocess|node|electron)$/i;
+
+  const candidates = [];
+  function scan(current, depth = 0) {
+    if (depth > 2) return;
+    try {
+      const items = fs.readdirSync(current, { withFileTypes: true });
+      for (const item of items) {
+        const full = path.join(current, item.name);
+        if (item.isDirectory() && !item.name.startsWith('.') && !/(_commonredist|support|directx|redist|prerequisites)/i.test(item.name)) {
+          scan(full, depth + 1);
+        } else if (item.isFile() && item.name.toLowerCase().endsWith('.exe')) {
+          const base = path.basename(item.name, '.exe').toLowerCase();
+          if (!JUNK_EXE.test(base)) {
+            try {
+              const stat = fs.statSync(full);
+              if (stat.size > 300 * 1024) {
+                candidates.push({ path: full, size: stat.size, base, depth });
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  scan(dirPath, 0);
+  if (candidates.length === 0) return null;
+
+  const cleanTitle = (title || path.basename(dirPath)).toLowerCase().replace(/[^a-z0-9]/g, '');
+  candidates.sort((a, b) => {
+    let scoreA = Math.min(80, Math.floor(a.size / (1024 * 1024)));
+    let scoreB = Math.min(80, Math.floor(b.size / (1024 * 1024)));
+    if (cleanTitle && a.base.includes(cleanTitle)) scoreA += 100;
+    if (cleanTitle && b.base.includes(cleanTitle)) scoreB += 100;
+    if (/shipping|win64|game/i.test(a.base)) scoreA += 30;
+    if (/shipping|win64|game/i.test(b.base)) scoreB += 30;
+    scoreA -= a.depth * 10;
+    scoreB -= b.depth * 10;
+    return scoreB - scoreA;
+  });
+
+  return candidates[0].path;
+}
+
+// -----------------------------------------------------------------------------
+// EPIC GAMES SCANNER
+// -----------------------------------------------------------------------------
+async function scanEpicGames() {
+  const games = [];
+  const progData = process.env.ProgramData || 'C:\\ProgramData';
+  const manifestDirs = [
+    path.join(progData, 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests'),
+    path.join(progData, 'Epic', 'Manifests')
+  ];
+
+  for (const mDir of manifestDirs) {
+    if (!fs.existsSync(mDir)) continue;
+    try {
+      const files = fs.readdirSync(mDir);
+      for (const file of files) {
+        if (!file.endsWith('.item')) continue;
+        try {
+          const content = JSON.parse(fs.readFileSync(path.join(mDir, file), 'utf-8'));
+          if (content.DisplayName && (content.InstallLocation || content.MainGameAppName)) {
+            const title = content.DisplayName;
+            const installDir = content.InstallLocation || '';
+            const appName = content.AppName || content.MainGameAppName || content.CatalogItemId || path.basename(file, '.item');
+            let exePath = '';
+
+            if (content.LaunchExecutable && installDir) {
+              const fullExe = path.join(installDir, content.LaunchExecutable);
+              if (fs.existsSync(fullExe)) {
+                exePath = fullExe;
+              }
+            }
+
+            if (!exePath && installDir && fs.existsSync(installDir)) {
+              exePath = findBestExecutableInDir(installDir, title) || '';
+            }
+
+            // Epic launcher direct URI fallback
+            const launchUri = `com.epicgames.launcher://apps/${encodeURIComponent(appName)}?action=launch&silent=true`;
+
+            games.push({
+              platformId: 'epic',
+              platformName: 'Epic Games',
+              gameId: `epic-${appName}`,
+              title,
+              executablePath: exePath || launchUri,
+              installDir,
+              version: content.AppVersionString || undefined
+            });
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+  return games;
+}
+
+// -----------------------------------------------------------------------------
+// GOG GALAXY & STANDALONE GOG SCANNER
+// -----------------------------------------------------------------------------
+async function scanGogGames() {
+  const games = [];
+  const regKeys = [
+    'HKLM\\SOFTWARE\\WOW6432Node\\GOG.com\\Games',
+    'HKLM\\SOFTWARE\\GOG.com\\Games'
+  ];
+
+  const seenIds = new Set();
+  for (const rk of regKeys) {
+    const raw = await queryWindowsRegistry(rk);
+    if (!raw) continue;
+
+    // Split registry output by subkeys
+    const blocks = raw.split(/(?=HKEY_LOCAL_MACHINE\\SOFTWARE\\(?:WOW6432Node\\)?GOG\.com\\Games\\[^\r\n]+)/i);
+    for (const block of blocks) {
+      const nameMatch = block.match(/gameName\s+REG_SZ\s+([^\r\n]+)/i);
+      const pathMatch = block.match(/path\s+REG_SZ\s+([^\r\n]+)/i);
+      const exeMatch = block.match(/exe\s+REG_SZ\s+([^\r\n]+)/i);
+      const idMatch = block.match(/gameID\s+REG_SZ\s+([^\r\n]+)/i) || block.match(/productID\s+REG_SZ\s+([^\r\n]+)/i);
+      const verMatch = block.match(/ver\s+REG_SZ\s+([^\r\n]+)/i);
+
+      if (nameMatch && (pathMatch || exeMatch)) {
+        const title = nameMatch[1].trim();
+        const installDir = pathMatch ? pathMatch[1].trim() : '';
+        const gameId = idMatch ? idMatch[1].trim() : title.replace(/[^a-zA-Z0-9]/g, '');
+        if (seenIds.has(gameId)) continue;
+        seenIds.add(gameId);
+
+        let exePath = exeMatch ? exeMatch[1].trim() : '';
+        if (exePath && !fs.existsSync(exePath) && installDir) {
+          exePath = path.join(installDir, path.basename(exePath));
+        }
+        if (!exePath || !fs.existsSync(exePath)) {
+          if (installDir && fs.existsSync(installDir)) {
+            exePath = findBestExecutableInDir(installDir, title) || '';
+          }
+        }
+
+        if (exePath || installDir) {
+          games.push({
+            platformId: 'gog',
+            platformName: 'GOG Galaxy',
+            gameId: `gog-${gameId}`,
+            title,
+            executablePath: exePath || (installDir ? path.join(installDir, title + '.exe') : ''),
+            installDir,
+            version: verMatch ? verMatch[1].trim() : undefined
+          });
+        }
+      }
+    }
+  }
+
+  // Registry covers 100% of installed GOG games on Windows natively without native SQLite binary bindings
+  return games;
+}
+
+// -----------------------------------------------------------------------------
+// UBISOFT CONNECT / UPLAY SCANNER
+// -----------------------------------------------------------------------------
+async function scanUbisoftGames() {
+  const games = [];
+  const regKeys = [
+    'HKLM\\SOFTWARE\\WOW6432Node\\Ubisoft\\Launcher\\Installs',
+    'HKLM\\SOFTWARE\\Ubisoft\\Launcher\\Installs'
+  ];
+
+  const seenIds = new Set();
+  for (const rk of regKeys) {
+    const raw = await queryWindowsRegistry(rk);
+    if (!raw) continue;
+
+    const blocks = raw.split(/(?=HKEY_LOCAL_MACHINE\\SOFTWARE\\(?:WOW6432Node\\)?Ubisoft\\Launcher\\Installs\\[^\r\n]+)/i);
+    for (const block of blocks) {
+      const keyHeaderMatch = block.match(/Installs\\(\d+)/i);
+      const installDirMatch = block.match(/InstallDir\s+REG_SZ\s+([^\r\n]+)/i);
+
+      if (keyHeaderMatch && installDirMatch) {
+        const ubiAppId = keyHeaderMatch[1].trim();
+        let installDir = installDirMatch[1].trim().replace(/\//g, '\\');
+        if (installDir.endsWith('\\')) installDir = installDir.slice(0, -1);
+
+        if (seenIds.has(ubiAppId)) continue;
+        seenIds.add(ubiAppId);
+
+        let folderTitle = path.basename(installDir).replace(/[-_]/g, ' ');
+        if (!folderTitle) folderTitle = `Ubisoft Game ${ubiAppId}`;
+
+        let exePath = '';
+        if (fs.existsSync(installDir)) {
+          exePath = findBestExecutableInDir(installDir, folderTitle) || '';
+        }
+
+        const launchUri = `uplay://launch/${ubiAppId}/0`;
+
+        games.push({
+          platformId: 'ubisoft',
+          platformName: 'Ubisoft Connect',
+          gameId: `ubisoft-${ubiAppId}`,
+          title: folderTitle,
+          executablePath: exePath || launchUri,
+          installDir
+        });
+      }
+    }
+  }
+  return games;
+}
+
+// -----------------------------------------------------------------------------
+// EA DESKTOP / ORIGIN SCANNER
+// -----------------------------------------------------------------------------
+async function scanEaGames() {
+  const games = [];
+  const regKeys = [
+    'HKLM\\SOFTWARE\\WOW6432Node\\EA Games',
+    'HKLM\\SOFTWARE\\EA Games',
+    'HKLM\\SOFTWARE\\WOW6432Node\\Electronic Arts',
+    'HKLM\\SOFTWARE\\Electronic Arts'
+  ];
+
+  const seenDirs = new Set();
+  for (const rk of regKeys) {
+    const raw = await queryWindowsRegistry(rk);
+    if (!raw) continue;
+
+    const blocks = raw.split(/(?=HKEY_LOCAL_MACHINE\\SOFTWARE\\(?:WOW6432Node\\)?(?:Electronic Arts|EA Games)\\[^\r\n]+)/i);
+    for (const block of blocks) {
+      const dirMatch = block.match(/(?:Install Dir|InstallDir|Path)\s+REG_SZ\s+([^\r\n]+)/i);
+      const nameMatch = block.match(/(?:DisplayName|Title)\s+REG_SZ\s+([^\r\n]+)/i);
+      const headerMatch = block.match(/(?:Electronic Arts|EA Games)\\([^\r\n\\]+)/i);
+
+      if (dirMatch) {
+        let installDir = dirMatch[1].trim().replace(/\//g, '\\');
+        if (installDir.endsWith('\\')) installDir = installDir.slice(0, -1);
+
+        if (seenDirs.has(installDir.toLowerCase())) continue;
+        seenDirs.add(installDir.toLowerCase());
+
+        const title = nameMatch ? nameMatch[1].trim() : (headerMatch ? headerMatch[1].trim() : path.basename(installDir));
+
+        let exePath = '';
+        if (fs.existsSync(installDir)) {
+          exePath = findBestExecutableInDir(installDir, title) || '';
+        }
+
+        games.push({
+          platformId: 'ea',
+          platformName: 'EA App',
+          gameId: `ea-${title.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+          title,
+          executablePath: exePath || (installDir ? path.join(installDir, title + '.exe') : ''),
+          installDir
+        });
+      }
+    }
+  }
+
+  // Also check standard EA Desktop / Origin common install paths across all drives
+  const systemDrives = getSystemDrives();
+  for (const drive of systemDrives) {
+    const commonEaPaths = [
+      path.join(drive, 'Program Files', 'EA Games'),
+      path.join(drive, 'Program Files (x86)', 'Origin Games'),
+      path.join(drive, 'EA Games'),
+      path.join(drive, 'Origin Games'),
+      path.join(drive, 'Games', 'EA Games')
+    ];
+
+    for (const eaPath of commonEaPaths) {
+      if (!fs.existsSync(eaPath)) continue;
+      try {
+        const subs = fs.readdirSync(eaPath, { withFileTypes: true });
+        for (const sub of subs) {
+          if (!sub.isDirectory() || sub.name.startsWith('.')) continue;
+          const gameDir = path.join(eaPath, sub.name);
+          if (seenDirs.has(gameDir.toLowerCase())) continue;
+          seenDirs.add(gameDir.toLowerCase());
+
+          const exe = findBestExecutableInDir(gameDir, sub.name);
+          if (exe) {
+            games.push({
+              platformId: 'ea',
+              platformName: 'EA App',
+              gameId: `ea-${sub.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+              title: sub.name.replace(/[-_]/g, ' '),
+              executablePath: exe,
+              installDir: gameDir
+            });
+          }
+        }
+      } catch {}
+    }
+  }
+
+  return games;
+}
+
+// -----------------------------------------------------------------------------
+// UNIFIED ALL-PLATFORMS SCANNER HANDLER
+// -----------------------------------------------------------------------------
+ipcMain.handle('scanner:platforms', async (_event, targetPlatform) => {
+  const results = [];
+
+  // Helper to run individual platform scanners with safety
+  const runSafe = async (fn, name) => {
+    try {
+      return await fn();
+    } catch (err) {
+      console.warn(`[PlatformScanner] ${name} scan failed:`, err.message);
+      return [];
+    }
+  };
+
+  if (!targetPlatform || targetPlatform === 'steam') {
+    try {
+      const potentialSteamPaths = [
+        path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Steam'),
+        'C:\\Program Files\\Steam',
+        ...getSystemDrives().flatMap((d) => [path.join(d, 'Steam'), path.join(d, 'Games', 'Steam'), path.join(d, 'SteamLibrary')])
+      ];
+
+        let steamRoot = null;
+        for (const p of potentialSteamPaths) {
+          if (fs.existsSync(p) && fs.existsSync(path.join(p, 'steamapps'))) {
+            steamRoot = p;
+            break;
+          }
+        }
+
+        if (steamRoot) {
+          const libraryFolders = [steamRoot];
+          const vdfPath = path.join(steamRoot, 'steamapps', 'libraryfolders.vdf');
+          if (fs.existsSync(vdfPath)) {
+            try {
+              const vdfContent = fs.readFileSync(vdfPath, 'utf-8');
+              const pathMatches = vdfContent.matchAll(/"path"\s+"([^"]+)"/g);
+              for (const match of pathMatches) {
+                let libPath = match[1].replace(/\\\\/g, '\\');
+                if (fs.existsSync(libPath) && !libraryFolders.includes(libPath)) {
+                  libraryFolders.push(libPath);
+                }
+              }
+            } catch {}
+          }
+
+          const seenAppIds = new Set();
+          const IGNORED_APPS = new Set(['228980', '228988', '228990', '1070560', '1391110']);
+          for (const lib of libraryFolders) {
+            const appsDir = path.join(lib, 'steamapps');
+            if (!fs.existsSync(appsDir)) continue;
+            try {
+              const files = fs.readdirSync(appsDir);
+              for (const f of files) {
+                if (f.startsWith('appmanifest_') && f.endsWith('.acf')) {
+                  const manifestContent = fs.readFileSync(path.join(appsDir, f), 'utf-8');
+                  const appIdMatch = manifestContent.match(/"appid"\s+"(\d+)"/i);
+                  const nameMatch = manifestContent.match(/"name"\s+"([^"]+)"/i);
+                  const dirMatch = manifestContent.match(/"installdir"\s+"([^"]+)"/i);
+
+                  if (appIdMatch && nameMatch) {
+                    const appId = appIdMatch[1];
+                    const title = nameMatch[1];
+                    const installDir = dirMatch ? path.join(appsDir, 'common', dirMatch[1]) : '';
+                    if (!seenAppIds.has(appId) && !IGNORED_APPS.has(appId)) {
+                      seenAppIds.add(appId);
+                      results.push({
+                        platformId: 'steam',
+                        platformName: 'Steam',
+                        gameId: `steam-${appId}`,
+                        title,
+                        executablePath: `steam://run/${appId}`,
+                        installDir,
+                        headerUrl: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/library_600x900.jpg`,
+                        backdropUrl: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/library_hero.jpg`,
+                        logoUrl: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/logo.png`
+                      });
+                    }
+                  }
+                }
+              }
+            } catch {}
+          }
+        }
+    } catch {}
+  }
+
+  if (!targetPlatform || targetPlatform === 'epic') {
+    const epic = await runSafe(scanEpicGames, 'Epic');
+    results.push(...epic);
+  }
+
+  if (!targetPlatform || targetPlatform === 'gog') {
+    const gog = await runSafe(scanGogGames, 'GOG');
+    results.push(...gog);
+  }
+
+  if (!targetPlatform || targetPlatform === 'ubisoft') {
+    const ubi = await runSafe(scanUbisoftGames, 'Ubisoft');
+    results.push(...ubi);
+  }
+
+  if (!targetPlatform || targetPlatform === 'ea') {
+    const ea = await runSafe(scanEaGames, 'EA');
+    results.push(...ea);
+  }
+
+  return results;
 });
 
 // =============================================================================
@@ -1687,123 +2336,8 @@ function getVaultDir(gameId) {
   return base;
 }
 
-ipcMain.handle('savevault:scan-locations', async (_event, gameId, gameTitle) => {
-  return getSaveLocationsForGame(gameTitle);
-});
-
-ipcMain.handle('savevault:list-snapshots', async (_event, gameId) => {
-  try {
-    const vaultDir = getVaultDir(gameId);
-    const metaFile = path.join(vaultDir, 'snapshots.json');
-    if (!fs.existsSync(metaFile)) return [];
-    const data = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.error('[SaveVault] List error:', err);
-    return [];
-  }
-});
-
-ipcMain.handle('savevault:create-snapshot', async (_event, { gameId, gameTitle, note, isAuto }) => {
-  try {
-    const vaultDir = getVaultDir(gameId);
-    const metaFile = path.join(vaultDir, 'snapshots.json');
-    const locations = getSaveLocationsForGame(gameTitle);
-    const activeLoc = locations.find((l) => l.exists);
-
-    if (!activeLoc) {
-      return { success: false, error: `No active save folder found for "${gameTitle}".` };
-    }
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const snapshotId = `snapshot_${timestamp}`;
-    const snapshotDir = path.join(vaultDir, snapshotId);
-
-    const fileCount = copyDirRecursiveSync(activeLoc.path, snapshotDir);
-    const sizeBytes = getDirSizeBytes(snapshotDir);
-
-    const snapshot = {
-      id: snapshotId,
-      gameId,
-      gameTitle,
-      timestamp: new Date().toISOString(),
-      note: note || (isAuto ? 'Pre-launch auto snapshot' : 'Manual save backup'),
-      sizeBytes,
-      fileCount,
-      archivePath: snapshotDir,
-      isAutoBackup: Boolean(isAuto)
-    };
-
-    let list = [];
-    if (fs.existsSync(metaFile)) {
-      try {
-        list = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
-      } catch {}
-    }
-    list.unshift(snapshot);
-    // Keep max 25 snapshots per game
-    if (list.length > 25) {
-      const evicted = list.slice(25);
-      for (const target of evicted) {
-        if (target && target.archivePath && fs.existsSync(target.archivePath)) {
-          try {
-            fs.rmSync(target.archivePath, { recursive: true, force: true });
-          } catch {}
-        }
-      }
-      list = list.slice(0, 25);
-    }
-    fs.writeFileSync(metaFile, JSON.stringify(list, null, 2), 'utf-8');
-
-    console.log(`[SaveVault] Created snapshot for ${gameTitle}: ${fileCount} files, ${(sizeBytes / 1024).toFixed(0)} KB`);
-    return { success: true, snapshot };
-  } catch (err) {
-    console.error('[SaveVault] Create snapshot error:', err);
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('savevault:restore-snapshot', async (_event, { gameId, snapshotId }) => {
-  try {
-    const vaultDir = getVaultDir(gameId);
-    const metaFile = path.join(vaultDir, 'snapshots.json');
-    if (!fs.existsSync(metaFile)) return { success: false, error: 'Vault metadata not found' };
-
-    const list = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
-    const target = list.find((s) => s.id === snapshotId);
-    if (!target || !fs.existsSync(target.archivePath)) {
-      return { success: false, error: 'Snapshot archive files not found on disk' };
-    }
-
-    const locations = getSaveLocationsForGame(target.gameTitle);
-    const activeLoc = locations.find((l) => l.exists) || locations[0];
-    if (!activeLoc) return { success: false, error: 'No save destination determined' };
-
-    // Safety backup of existing save before restoring
-    const safetyDir = path.join(vaultDir, `safety_pre_restore_${Date.now()}`);
-    if (fs.existsSync(activeLoc.path)) {
-      copyDirRecursiveSync(activeLoc.path, safetyDir);
-    }
-
-    // Restore files
-    copyDirRecursiveSync(target.archivePath, activeLoc.path);
-    console.log(`[SaveVault] Successfully restored snapshot "${snapshotId}" to ${activeLoc.path}`);
-    return { success: true };
-  } catch (err) {
-    console.error('[SaveVault] Restore error:', err);
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('savevault:open-folder', async (_event, gameId) => {
-  try {
-    const vaultDir = getVaultDir(gameId);
-    await shell.openPath(vaultDir);
-    return { success: true, path: vaultDir };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
+// Save Vault & Auto-Backup Handlers (delegated to SaveVaultIpc module)
+registerSaveVaultIpc(ipcMain, app);
 
 // =========================================================================
 // ASTRA V3: GAMING ACTIVITY HISTORY & PLAYTIME LOG

@@ -20,7 +20,9 @@ import {
   Trash2,
   HardDrive,
   Camera,
-  FolderOpen
+  FolderOpen,
+  Download,
+  Upload
 } from 'lucide-react';
 import type { AppSettings, GlobalTheme, ViewMode, Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
@@ -33,6 +35,7 @@ interface SettingsModalProps {
   settings: AppSettings;
   onUpdateSettings: (newSettings: AppSettings) => void;
   onResetLibrary: () => void;
+  onRestoreLibrary?: (games: Game[]) => void;
   games?: Game[];
   onUpdateGame?: (updated: Game) => void;
   onBatchUpdateGames?: (updatedGames: Game[]) => void;
@@ -45,6 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onUpdateSettings,
   onResetLibrary,
+  onRestoreLibrary,
   games,
   onUpdateGame,
   onBatchUpdateGames,
@@ -216,6 +220,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setBatchProgress(null);
     setBatchStatusMessage(`✓ Finished! Downloaded live wallpapers for ${completed} games.`);
     audioEngine.playSelect();
+  };
+
+  const [backupMessage, setBackupMessage] = useState<string>('');
+  const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExportBackup = () => {
+    if (!games || games.length === 0) {
+      setBackupMessage('No games to export in current library.');
+      return;
+    }
+    try {
+      audioEngine.playSelect();
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(games, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `astra_library_backup_${timestamp}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      setBackupMessage(`Exported backup with ${games.length} games!`);
+    } catch (err) {
+      console.error('Export failed:', err);
+      setBackupMessage('Export failed. Check console for details.');
+    }
+  };
+
+  const handleRestoreBackupFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id && parsed[0].title) {
+          audioEngine.playSelect();
+          onRestoreLibrary?.(parsed as Game[]);
+          setBackupMessage(`Successfully restored ${parsed.length} games from backup!`);
+          if (restoreFileInputRef.current) {
+            restoreFileInputRef.current.value = '';
+          }
+        } else {
+          setBackupMessage('Invalid backup format: expected an array of games.');
+        }
+      } catch (err) {
+        console.error('Failed to parse backup JSON:', err);
+        setBackupMessage('Invalid JSON backup file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const [appShortcutMessage, setAppShortcutMessage] = useState('');
+  const handleCreateAppShortcut = async () => {
+    if (!window.api?.createAppDesktopShortcut) return;
+    audioEngine.playSelect();
+    const res = await window.api.createAppDesktopShortcut();
+    if (res.success) {
+      setAppShortcutMessage('✓ Created!');
+      setTimeout(() => setAppShortcutMessage(''), 4000);
+    } else {
+      setAppShortcutMessage('Failed');
+      setTimeout(() => setAppShortcutMessage(''), 4000);
+    }
   };
 
   if (!isOpen) return null;
@@ -1207,6 +1277,85 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }}
                 className="w-4 h-4 accent-[var(--game-accent)] cursor-pointer"
               />
+            </div>
+          </div>
+
+          {/* Library Backup & Restore */}
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2 text-xs font-bold text-white/80 uppercase tracking-wider">
+              <Database className="w-4 h-4 text-[var(--game-accent)]" />
+              <span>Library Backup & Portability</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div>
+                <h4 className="text-xs font-bold text-white">Full JSON Library Backup</h4>
+                <p className="text-[11px] text-white/50 mt-0.5">
+                  Save your complete library (custom artwork, notes, launch arguments, playtime history, and tags) to a portable JSON file or restore it on any machine.
+                </p>
+              </div>
+
+              {backupMessage && (
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white/90 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--game-accent)] flex-shrink-0" />
+                  <span>{backupMessage}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--game-accent)] text-black text-xs font-bold hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-md"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Backup (JSON)</span>
+                </button>
+
+                <input
+                  ref={restoreFileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleRestoreBackupFile}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    restoreFileInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/20 glass-pill text-white/80 hover:text-white text-xs font-semibold hover:border-white/40 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Restore from JSON</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Windows Desktop Shortcut Integration */}
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2 text-xs font-bold text-white/80 uppercase tracking-wider">
+              <Monitor className="w-4 h-4 text-[var(--game-accent)]" />
+              <span>Windows Desktop Integration</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-white">Create Desktop Shortcut for Astra</div>
+                <div className="text-[10px] text-white/40">
+                  Places an Astra Game Launcher shortcut on your Windows desktop for quick access
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCreateAppShortcut}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-white/15 glass-pill text-white/80 hover:text-white text-xs font-semibold cursor-pointer transition-colors"
+              >
+                <Monitor className="w-3.5 h-3.5 text-sky-400" />
+                <span>{appShortcutMessage || 'Create Shortcut'}</span>
+              </button>
             </div>
           </div>
 

@@ -87,7 +87,7 @@ export interface Game {
   executablePath: string;
   workingDirectory?: string;
   launchArguments?: string;
-  type: 'standalone' | 'steam' | 'emulator' | 'other';
+  type: 'standalone' | 'steam' | 'epic' | 'gog' | 'ubisoft' | 'ea' | 'emulator' | 'other';
   coverUrl: string;
   backdropUrl?: string;
   videoUrl?: string; // Looping video scene (MP4/WebM)
@@ -106,6 +106,7 @@ export interface Game {
   stats: GameStats;
   notes?: string;
   checklists?: { id: string; text: string; done: boolean }[];
+  hidden?: boolean;
   mods?: GameMod[];
   modPresets?: ModPackPreset[];
   modsEnabledOnLaunch?: boolean;
@@ -194,6 +195,21 @@ export interface SteamGameInfo {
   headerUrl: string;
   backdropUrl: string;
   logoUrl?: string;
+}
+
+export type PlatformId = 'steam' | 'epic' | 'gog' | 'ubisoft' | 'ea';
+
+export interface DetectedPlatformGame {
+  platformId: PlatformId;
+  platformName: string;
+  gameId: string;
+  title: string;
+  executablePath: string;
+  installDir: string;
+  headerUrl?: string;
+  backdropUrl?: string;
+  logoUrl?: string;
+  version?: string;
 }
 
 export interface DiscordActivity {
@@ -326,12 +342,26 @@ export interface ElectronAPI {
   pickImage: () => Promise<string | null>;
   pickAudio: () => Promise<string | null>;
   pickVideo: () => Promise<string | null>;
-  pickFolder: () => Promise<string | null>;
+  pickFolder: {
+    (): Promise<string | null>;
+    (options: { multi: true }): Promise<string[] | null>;
+    (options: { multi: false }): Promise<string | null>;
+    (options?: { multi?: boolean }): Promise<string | string[] | null>;
+  };
   getExeVersion: (exePath: string) => Promise<string | null>;
+  checkGameVersion: (exePath: string) => Promise<{
+    version: string | null;
+    lastModified: string | null;
+    fileSizeBytes?: number;
+    exists: boolean;
+  }>;
   launchGame: (game: Game) => Promise<{ success: boolean; pid?: number; error?: string; mode?: string }>;
   openGameFolder: (game: Game) => Promise<{ success: boolean; error?: string }>;
-  scanFolder: (dirPath: string, options?: { smartFilter?: boolean }) => Promise<FolderScanResult[]>;
+  createDesktopShortcut?: (game: Game) => Promise<{ success: boolean; path?: string; error?: string }>;
+  createAppDesktopShortcut?: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  scanFolder: (dirPath: string | string[], options?: { smartFilter?: boolean }) => Promise<FolderScanResult[]>;
   scanSteam: () => Promise<SteamGameInfo[]>;
+  scanPlatformGames: (platform?: PlatformId) => Promise<DetectedPlatformGame[]>;
   loadData: () => Promise<{ games: Game[]; settings: AppSettings } | null>;
   saveData: (data: { games: Game[]; settings: AppSettings }) => Promise<{ success: boolean }>;
   downloadLiveWallpaper: (options: {
@@ -367,7 +397,22 @@ export interface ElectronAPI {
   createSaveSnapshot?: (gameId: string, gameTitle: string, note?: string, isAuto?: boolean) => Promise<{ success: boolean; snapshot?: SaveSnapshot; error?: string }>;
   listSaveSnapshots?: (gameId: string) => Promise<SaveSnapshot[]>;
   restoreSaveSnapshot?: (gameId: string, snapshotId: string) => Promise<{ success: boolean; error?: string }>;
-  openSaveDirectory?: (gameId: string) => Promise<{ success: boolean; path?: string }>;
+  listBackups?: (gameId: string, customStorage?: string) => Promise<any[]>;
+  createBackup?: (params: {
+    gameId: string;
+    gameTitle: string;
+    savePath?: string;
+    notes?: string;
+    gameVersion?: string;
+    isAuto?: boolean;
+    retentionCount?: number;
+    customStorage?: string;
+  }) => Promise<{ success: boolean; backup?: any; error?: string }>;
+  restoreBackup?: (params: { gameId: string; backupId: string; customStorage?: string }) => Promise<{ success: boolean; restoredPath?: string; error?: string }>;
+  deleteBackup?: (params: { gameId: string; backupId: string; customStorage?: string }) => Promise<{ success: boolean; error?: string }>;
+  pickSaveStorageFolder?: () => Promise<string | null>;
+  openSaveDirectory?: (gameId: string, customStorage?: string) => Promise<{ success: boolean; path?: string }>;
+  onSaveVaultProgress?: (callback: (info: { gameId: string; progress: number }) => void) => () => void;
   // Activity History APIs
   getActivityLog?: () => Promise<GamingSession[]>;
   recordActivitySession?: (session: GamingSession) => Promise<{ success: boolean }>;

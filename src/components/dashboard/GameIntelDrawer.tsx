@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Play, Clock, Trophy, FolderOpen, Palette, BookOpen, Star, Shield, Timer, Camera, Quote, Brain } from 'lucide-react';
+import { X, Play, Clock, Trophy, FolderOpen, Palette, BookOpen, Star, Shield, Timer, Camera, Quote, Brain, Monitor } from 'lucide-react';
 import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
@@ -34,6 +34,7 @@ export const GameIntelDrawer: React.FC<GameIntelDrawerProps> = ({
   onTakeScreenshot
 }) => {
   const [isFetchingHltb, setIsFetchingHltb] = useState(false);
+  const [shortcutStatus, setShortcutStatus] = useState('');
   const checkedHltbRef = useRef<Set<string>>(new Set());
 
   // Auto-fetch HowLongToBeat completion statistics if missing
@@ -62,14 +63,6 @@ export const GameIntelDrawer: React.FC<GameIntelDrawerProps> = ({
     }
   }, [isOpen, game, onUpdateGame]);
 
-  if (!isOpen || !game) return null;
-
-  const vibeConfig = ThemeEngine.getVibeConfig(game.theme?.vibe, game);
-  const achievements = game.achievements || [];
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
-  const progressPercent = achievements.length > 0 ? Math.round((unlockedCount / achievements.length) * 100) : 0;
-  const hltb = game.hltb || game.metadata?.hltb;
-
   const [activeOracleCategory, setActiveOracleCategory] = useState<'all' | 'bosses' | 'builds' | 'hints' | 'lore'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -82,6 +75,14 @@ export const GameIntelDrawer: React.FC<GameIntelDrawerProps> = ({
     if (activeOracleCategory === 'all') return oracleProfile.intel;
     return oracleProfile.intel.filter((item) => item.category === activeOracleCategory);
   }, [oracleProfile, activeOracleCategory]);
+
+  if (!isOpen || !game) return null;
+
+  const vibeConfig = ThemeEngine.getVibeConfig(game.theme?.vibe, game);
+  const achievements = game.achievements || [];
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+  const progressPercent = achievements.length > 0 ? Math.round((unlockedCount / achievements.length) * 100) : 0;
+  const hltb = game.hltb || game.metadata?.hltb;
 
   const handleCopyIntel = (item: OracleIntelTopic) => {
     audioEngine.playSelect();
@@ -580,6 +581,28 @@ export const GameIntelDrawer: React.FC<GameIntelDrawerProps> = ({
             >
               <Star className={`w-3.5 h-3.5 ${game.favorite ? 'fill-yellow-400' : ''}`} />
               <span>{game.favorite ? 'Favorited' : 'Favorite'}</span>
+            </button>
+
+            {/* Desktop Shortcut Button */}
+            <button
+              onClick={async () => {
+                audioEngine.playSelect();
+                if (window.api?.createDesktopShortcut) {
+                  const res = await window.api.createDesktopShortcut(game);
+                  if (res.success) {
+                    setShortcutStatus('✓ Added!');
+                    setTimeout(() => setShortcutStatus(''), 3000);
+                  } else {
+                    setShortcutStatus('Failed');
+                    setTimeout(() => setShortcutStatus(''), 3000);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-semibold cursor-pointer transition-all border border-white/15"
+              title="Create Windows Desktop Shortcut"
+            >
+              <Monitor className="w-3.5 h-3.5 text-sky-400" />
+              <span>{shortcutStatus || 'Shortcut'}</span>
             </button>
 
             {/* Snap Screenshot Button */}

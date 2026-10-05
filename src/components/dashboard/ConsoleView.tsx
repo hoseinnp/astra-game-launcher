@@ -42,6 +42,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
 
   const displayedGames = useMemo(() => {
     return games.filter((g) => {
+      if (g.hidden) return false;
       if (activeCollection === 'all') return true;
       if (activeCollection === 'favorites') return g.favorite;
       return g.collection === activeCollection;

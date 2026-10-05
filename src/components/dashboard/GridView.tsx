@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Play, Star, Clock, Filter, Trash2, Trophy, Bookmark, LayoutGrid, Rows3, Image as ImageIcon, Quote } from 'lucide-react';
+import { Play, Star, Clock, Filter, Trash2, Trophy, Bookmark, LayoutGrid, Rows3, Image as ImageIcon, Quote, EyeOff } from 'lucide-react';
 import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { ThemeEngine } from '../../services/themeEngine';
@@ -46,17 +46,28 @@ export const GridView: React.FC<GridViewProps> = ({
     onDensityChange?.(newDensity);
   }, [onDensityChange]);
 
+  const visibleGamesCount = useMemo(() => games.filter((g) => !g.hidden).length, [games]);
+  const hiddenGamesCount = useMemo(() => games.filter((g) => g.hidden).length, [games]);
+
   // Filter and sort games
   const filteredGames = useMemo(() => {
     return games
       .filter((g) => {
+        // If viewing hidden category, only show hidden games
+        if (activeFilter === 'hidden') {
+          if (!g.hidden) return false;
+        } else {
+          // In standard views, hide games marked hidden
+          if (g.hidden) return false;
+        }
+
         const matchesSearch =
           g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           g.genres.some((genre) => genre.toLowerCase().includes(searchQuery.toLowerCase()));
 
         if (!matchesSearch) return false;
 
-        if (activeFilter === 'all') return true;
+        if (activeFilter === 'all' || activeFilter === 'hidden') return true;
         if (activeFilter === 'favorites') return g.favorite;
         if (activeFilter === 'playing') return g.collection === 'playing';
         if (activeFilter === 'backlog') return g.collection === 'backlog';
@@ -204,7 +215,7 @@ export const GridView: React.FC<GridViewProps> = ({
                 : 'glass-pill text-white/70 hover:text-white'
             }`}
           >
-            All ({games.length})
+            All ({visibleGamesCount})
           </button>
 
           <button
@@ -266,6 +277,23 @@ export const GridView: React.FC<GridViewProps> = ({
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
             <span>Favorites</span>
           </button>
+
+          {hiddenGamesCount > 0 && (
+            <button
+              onClick={() => {
+                audioEngine.playHover();
+                setActiveFilter('hidden');
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
+                activeFilter === 'hidden'
+                  ? 'bg-amber-500 text-black font-bold shadow-md ring-1 ring-amber-400'
+                  : 'glass-pill text-amber-400/80 hover:text-amber-300 border border-amber-500/20'
+              }`}
+            >
+              <EyeOff className="w-3 h-3 text-amber-400" />
+              <span>Hidden ({hiddenGamesCount})</span>
+            </button>
+          )}
         </div>
 
         {/* Right Tools: View Density Switcher, Sort & Search */}
@@ -375,6 +403,12 @@ export const GridView: React.FC<GridViewProps> = ({
                         <h4 className="font-bold text-sm text-white truncate">{game.title}</h4>
                         <span className="text-xs">{itemVibe.badgeIcon}</span>
                         {game.favorite && <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 flex-shrink-0" />}
+                        {game.hidden && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <EyeOff className="w-2.5 h-2.5" />
+                            Hidden
+                          </span>
+                        )}
                         {game.quote?.text && (
                           <span
                             title={`“${game.quote.text}”${game.quote.speaker ? ` — ${game.quote.speaker}` : ''}`}
@@ -550,14 +584,19 @@ export const GridView: React.FC<GridViewProps> = ({
                         </button>
                       )}
 
-                      {/* Collection badge */}
-                      {game.collection && game.collection !== 'none' && (
+                      {/* Collection or Hidden badge */}
+                      {game.hidden ? (
+                        <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-amber-500/90 backdrop-blur-sm text-[9px] font-black uppercase tracking-wider text-black border border-amber-400 flex items-center gap-1 shadow-md">
+                          <EyeOff className="w-2.5 h-2.5 text-black" />
+                          <span>HIDDEN</span>
+                        </div>
+                      ) : game.collection && game.collection !== 'none' ? (
                         <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-sm text-[9px] font-black uppercase tracking-wider text-white/90 border border-white/20">
                           {game.collection === 'playing' && <span className="text-emerald-400">PLAYING</span>}
                           {game.collection === 'backlog' && <span className="text-amber-400">BACKLOG</span>}
                           {game.collection === 'completed' && <span className="text-purple-400">★ 100%</span>}
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Playtime Badge */}
                       <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[10px] text-white/90">

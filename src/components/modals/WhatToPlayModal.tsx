@@ -25,9 +25,7 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
   onOpenOverview,
   onOpenIntel
 }) => {
-  const [activeTab, setActiveTab] = useState<'oracle' | 'mood' | 'roulette' | 'backlog'>('oracle');
-  const [oracleSeed, setOracleSeed] = useState<number>(0);
-  const [isOracleConsulting, setIsOracleConsulting] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'roulette' | 'mood' | 'backlog'>('roulette');
 
   // Mood Matcher state
   const [selectedMood, setSelectedMood] = useState<MoodType>('adrenaline');
@@ -42,47 +40,6 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
 
   const reelRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
-
-
-  // Oracle's Celestial Prophecy
-  const oracleProphecy = useMemo(() => {
-    if (games.length === 0) return null;
-    const todayStr = new Date().toDateString();
-    let hash = oracleSeed;
-    for (let i = 0; i < todayStr.length; i++) {
-      hash = (hash * 33 + todayStr.charCodeAt(i)) >>> 0;
-    }
-    const chosenIndex = hash % games.length;
-    const game = games[chosenIndex];
-
-    const alignmentScore = (94.2 + (hash % 57) / 10).toFixed(1);
-    const houses = ['Nebula Horizon', 'Orion Expanse', 'Solar Apex', 'Constellation Vega', 'Deep Matrix', 'Astral Nexus'];
-    const house = houses[hash % houses.length];
-
-    const decrees = [
-      `Your neural telemetry indicates harmonic alignment with ${game.genres.slice(0, 2).join(' & ')}. The prophecy calls for action.`,
-      `You possess untapped focus energy. ${game.title} matches your current circadian gaming frequency.`,
-      `The celestial archive identifies tonight as the prime convergence window for ${game.title}. Unfinished milestones beckon.`,
-      `Optimal flow-state synchronization detected. Step into ${game.title} and conquer the unknown.`
-    ];
-    const decree = decrees[hash % decrees.length];
-
-    return {
-      game,
-      alignmentScore,
-      house,
-      decree
-    };
-  }, [games, oracleSeed]);
-
-  const handleConsultOracle = () => {
-    audioEngine.playOracleChime();
-    setIsOracleConsulting(true);
-    setTimeout(() => {
-      setOracleSeed((prev) => prev + 1);
-      setIsOracleConsulting(false);
-    }, 450);
-  };
 
   // Compute mood recommendations
   const moodRecommendations = useMemo(() => {
@@ -217,19 +174,19 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-gradient-to-r from-black/60 via-transparent to-black/60">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-[var(--game-accent,#2ee5ba)] to-purple-600 flex items-center justify-center text-black shadow-lg shadow-[0_0_20px_var(--game-glow)]">
-              <Sparkles className="w-5 h-5 font-bold animate-pulse text-black" />
+              <Dices className="w-5 h-5 font-bold text-black" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black text-white tracking-wide uppercase">
-                  Astra Game Oracle
+                  What to Play?
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-[var(--game-accent,#2ee5ba)]/20 text-[var(--game-accent,#2ee5ba)] border border-[var(--game-accent,#2ee5ba)]/30">
-                  V3 Neural Concierge
+                  Decision Engine
                 </span>
               </div>
               <p className="text-xs text-white/50">
-                Can't decide what to play? Let the Astra Oracle divinate your ideal gaming destiny.
+                Can't decide what to play? Spin the roulette reel, match your mood, or conquer your backlog.
               </p>
             </div>
           </div>
@@ -250,16 +207,16 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
           <button
             onClick={() => {
               audioEngine.playHover();
-              setActiveTab('oracle');
+              setActiveTab('roulette');
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'oracle'
+              activeTab === 'roulette'
                 ? 'bg-[var(--game-accent,#2ee5ba)] text-black shadow-md'
                 : 'glass-pill text-white/60 hover:text-white'
             }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Oracle's Prophecy</span>
+            <Dices className="w-4 h-4" />
+            <span>Cyber Roulette Reel</span>
           </button>
 
           <button
@@ -280,21 +237,6 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
           <button
             onClick={() => {
               audioEngine.playHover();
-              setActiveTab('roulette');
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'roulette'
-                ? 'bg-[var(--game-accent,#2ee5ba)] text-black shadow-md'
-                : 'glass-pill text-white/60 hover:text-white'
-            }`}
-          >
-            <Dices className="w-4 h-4" />
-            <span>Cyber Roulette Reel</span>
-          </button>
-
-          <button
-            onClick={() => {
-              audioEngine.playHover();
               setActiveTab('backlog');
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -307,105 +249,6 @@ export const WhatToPlayModal: React.FC<WhatToPlayModalProps> = ({
             <span>Backlog Finisher ({backlogFinishers.length})</span>
           </button>
         </div>
-
-        {/* TAB 0: ORACLE'S CELESTIAL PROPHECY */}
-        {activeTab === 'oracle' && oracleProphecy && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="relative rounded-3xl overflow-hidden border border-white/20 bg-gradient-to-br from-zinc-950 via-[#0e1322] to-zinc-950 p-6 shadow-2xl">
-              {/* Mystical background glow */}
-              <div
-                className="absolute inset-0 opacity-25 pointer-events-none filter blur-2xl"
-                style={{
-                  background: `radial-gradient(circle at 70% 30%, var(--game-accent,#2ee5ba) 0%, transparent 60%)`
-                }}
-              />
-
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                {/* Tarot-styled Relic Game Card */}
-                <div
-                  className={`relative w-48 h-72 rounded-2xl overflow-hidden border-2 border-[var(--game-accent,#2ee5ba)]/80 shadow-[0_0_30px_var(--game-glow)] flex-shrink-0 transition-transform duration-500 ${
-                    isOracleConsulting ? 'scale-95 blur-xs rotate-2' : 'scale-100 hover:scale-105'
-                  }`}
-                >
-                  <img
-                    src={oracleProphecy.game.coverUrl}
-                    alt={oracleProphecy.game.title}
-                    className="w-full h-full object-cover select-none"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
-
-                  {/* Top Rune Inscription */}
-                  <div className="absolute top-2 inset-x-2 flex items-center justify-between text-[8px] font-mono text-white/80 font-black tracking-widest uppercase">
-                    <span>ORACLE RUNE</span>
-                    <span>{oracleProphecy.alignmentScore}% ALIGN</span>
-                  </div>
-
-                  {/* Title Overlay */}
-                  <div className="absolute bottom-3 inset-x-3 text-center">
-                    <h4 className="text-xs font-black text-white uppercase tracking-wider drop-shadow-md truncate">
-                      {oracleProphecy.game.title}
-                    </h4>
-                  </div>
-                </div>
-
-                {/* Oracle Insights & Decree */}
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-[var(--game-accent,#2ee5ba)] uppercase px-2 py-0.5 rounded-full bg-[var(--game-accent,#2ee5ba)]/15 border border-[var(--game-accent,#2ee5ba)]/30">
-                      ★ TODAY'S DESTINY
-                    </span>
-                    <span className="text-[10px] font-mono text-white/50 tracking-wider">
-                      SECTOR: {oracleProphecy.house}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-2xl font-black text-white tracking-wide">
-                      {oracleProphecy.game.title}
-                    </h3>
-                    <p className="text-xs text-white/50 mt-1">
-                      {oracleProphecy.game.genres.join(' • ')} • {oracleProphecy.game.stats.playCount || 0} previous sessions
-                    </p>
-                  </div>
-
-                  {/* Decree Box */}
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--game-accent,#2ee5ba)] mb-1 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>The Oracle's Decree</span>
-                    </div>
-                    <p className="text-xs text-white/80 leading-relaxed italic">
-                      "{oracleProphecy.decree}"
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      onClick={() => {
-                        onLaunchGame(oracleProphecy.game);
-                        onClose();
-                      }}
-                      className="px-6 py-3 rounded-2xl bg-[var(--game-accent,#2ee5ba)] text-black font-extrabold text-xs flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_var(--game-glow)] cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-black" />
-                      <span>Fulfill Destiny (Launch)</span>
-                    </button>
-
-                    <button
-                      onClick={handleConsultOracle}
-                      disabled={isOracleConsulting}
-                      className="px-4 py-3 rounded-2xl glass-pill hover:bg-white/15 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
-                    >
-                      <RotateCcw className={`w-3.5 h-3.5 ${isOracleConsulting ? 'animate-spin' : ''}`} />
-                      <span>Consult Oracle Again</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* TAB 1: MOOD & TIME MATCHER */}
         {activeTab === 'mood' && (

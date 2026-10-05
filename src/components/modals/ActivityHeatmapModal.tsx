@@ -21,7 +21,7 @@ interface ActivityHeatmapModalProps {
 
 export const ActivityHeatmapModal: React.FC<ActivityHeatmapModalProps> = ({
   isOpen,
-  games,
+  games: _games,
   onClose
 }) => {
   const [sessions, setSessions] = useState<GamingSession[]>([]);
@@ -34,37 +34,14 @@ export const ActivityHeatmapModal: React.FC<ActivityHeatmapModalProps> = ({
     const loadSessions = async () => {
       let list: GamingSession[] = [];
       if (window.api?.getActivityLog) {
-        list = await window.api.getActivityLog();
-      }
-      // If no external sessions logged yet, generate realistic seeded matrix from current games' lastPlayed and playtime
-      if (list.length === 0 && games.length > 0) {
-        const seeded: GamingSession[] = [];
-        const now = Date.now();
-        games.forEach((g, gIdx) => {
-          const totalMinutes = g.stats.playtimeMinutes || 0;
-          if (totalMinutes > 0) {
-            const sessionsCount = Math.min(18, Math.max(1, g.stats.playCount || Math.ceil(totalMinutes / 90)));
-            const avgPerSession = Math.round(totalMinutes / sessionsCount);
-            for (let i = 0; i < sessionsCount; i++) {
-              const daysAgo = (i * 3 + gIdx * 5) % 180;
-              const sessionDate = new Date(now - daysAgo * 24 * 3600 * 1000);
-              const dateStr = sessionDate.toISOString().split('T')[0];
-              seeded.push({
-                id: `seed_${g.id}_${i}`,
-                gameId: g.id,
-                gameTitle: g.title,
-                startTime: sessionDate.toISOString(),
-                endTime: new Date(sessionDate.getTime() + avgPerSession * 60000).toISOString(),
-                durationMinutes: avgPerSession,
-                date: dateStr
-              });
-            }
-          }
-        });
-        list = seeded;
+        try {
+          list = await window.api.getActivityLog();
+        } catch (err) {
+          console.warn('Failed to load activity log:', err);
+        }
       }
       if (isMounted) {
-        setSessions(list);
+        setSessions(list || []);
       }
     };
 
@@ -72,7 +49,7 @@ export const ActivityHeatmapModal: React.FC<ActivityHeatmapModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, games]);
+  }, [isOpen]);
 
   // Generate 52 weeks (364 days) matrix
   const matrixDays = useMemo(() => {

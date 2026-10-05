@@ -8,22 +8,22 @@ import { gamepadEngine } from './services/gamepadEngine';
 import { AchievementEngine } from './services/achievementEngine';
 import { TopBar } from './components/layout/TopBar';
 import { ToastStack } from './components/layout/ToastStack';
+import { ImportProgressBar } from './components/layout/ImportProgressBar';
 import { ConsoleView } from './components/dashboard/ConsoleView';
 import { GridView } from './components/dashboard/GridView';
 import { CommandPalette } from './components/palette/CommandPalette';
 import { NotesDrawer } from './components/dashboard/NotesDrawer';
-import { EasterEggModal } from './components/modals/EasterEggModal';
 import { ConfirmRemoveModal } from './components/modals/ConfirmRemoveModal';
 import { GameIntelDrawer } from './components/dashboard/GameIntelDrawer';
 import { NavigationHud } from './components/layout/NavigationHud';
 import type { GridDensity } from './components/dashboard/GridView';
 import { normalizeMediaUrl } from './utils/mediaUrl';
 import type { ControllerDetails } from './utils/deviceDetector';
-import { LoginScreen } from './components/auth/LoginScreen';
 import type { UserProfile } from './types/game';
 import { InputModeToast, type InputModeToastData } from './components/layout/InputModeToast';
 import { jukeboxEngine } from './services/jukeboxEngine';
 import { hapticsService } from './services/hapticsService';
+import { SaveVaultService } from './services/SaveVaultService';
 
 // Code-split heavy views and secondary modals with React.lazy
 const PhysicalShelfView = lazy(() => import('./components/dashboard/PhysicalShelfView').then(m => ({ default: m.PhysicalShelfView })));
@@ -203,18 +203,11 @@ export const App: React.FC = () => {
   const [games, setGames] = useState<Game[]>(cachedData.games);
   const [settings, setSettings] = useState<AppSettings>(cachedData.settings);
   const [profiles, setProfiles] = useState<UserProfile[]>(cachedData.profiles || DEFAULT_PROFILES);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
-    return (cachedData.profiles && cachedData.profiles[0]) || DEFAULT_PROFILES[0];
-  });
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return cachedData.settings?.skipStartupScreen === true;
-  });
   const [selectedGameIndex, setSelectedGameIndex] = useState<number>(0);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
-  const [isEasterEggOpen, setIsEasterEggOpen] = useState<boolean>(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isIntelDrawerOpen, setIsIntelDrawerOpen] = useState<boolean>(false);
   const [isWhatToPlayOpen, setIsWhatToPlayOpen] = useState<boolean>(false);
@@ -231,7 +224,6 @@ export const App: React.FC = () => {
   const [overviewGame, setOverviewGame] = useState<Game | null>(null);
   const [modManagingGame, setModManagingGame] = useState<Game | null>(null);
   const [gamePendingRemoval, setGamePendingRemoval] = useState<Game | null>(null);
-  const [konamiProgress, setKonamiProgress] = useState<string[]>([]);
   const [activeInputMode, setActiveInputMode] = useState<'keyboard' | 'controller'>('keyboard');
   const [controllerDetails, setControllerDetails] = useState<ControllerDetails | null>(null);
   const [gamepadConnected, setGamepadConnected] = useState<boolean>(false);
@@ -270,7 +262,6 @@ export const App: React.FC = () => {
     modManagingGame !== null ||
     gamePendingRemoval !== null ||
     isNotesOpen ||
-    isEasterEggOpen ||
     isIntelDrawerOpen ||
     isSetupWizardOpen;
 
@@ -288,7 +279,6 @@ export const App: React.FC = () => {
 
   const modalStateRef = useRef({
     gamePendingRemoval,
-    isEasterEggOpen,
     isSetupWizardOpen,
     isWhatToPlayOpen,
     isJukeboxOpen,
@@ -309,7 +299,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     modalStateRef.current = {
       gamePendingRemoval,
-      isEasterEggOpen,
       isSetupWizardOpen,
       isWhatToPlayOpen,
       isJukeboxOpen,
@@ -336,12 +325,7 @@ export const App: React.FC = () => {
       setGamePendingRemoval(null);
       return true;
     }
-    // Layer 2: Special / Secret Overlays
-    if (s.isEasterEggOpen) {
-      setIsEasterEggOpen(false);
-      return true;
-    }
-    // Layer 3: Fullscreen Onboarding Wizard
+    // Layer 2: Fullscreen Onboarding Wizard
     if (s.isSetupWizardOpen) {
       setIsSetupWizardOpen(false);
       return true;
@@ -451,18 +435,11 @@ export const App: React.FC = () => {
       setSettings(loadedSettings);
       if (loadedProfiles && loadedProfiles.length > 0) {
         setProfiles(loadedProfiles);
-        setCurrentUser((prev) => {
-          const match = loadedProfiles.find((p) => p.id === prev.id);
-          return match || loadedProfiles[0];
-        });
       }
       ThemeEngine.applyGlobalTheme(loadedSettings.globalTheme);
       ThemeEngine.applyArchetype(loadedSettings.experienceArchetype || 'digital');
       if (loadedGames.length > 0) {
         setSelectedGameIndex((prev) => (prev >= loadedGames.length ? 0 : prev));
-      }
-      if (loadedSettings.skipStartupScreen) {
-        setIsLoggedIn(true);
       }
       if (window.api?.getAutoLaunch) {
         window.api.getAutoLaunch().then((autoLaunch) => {
@@ -475,6 +452,44 @@ export const App: React.FC = () => {
         StoreService.enrichVersions(loadedGames, (updated) => setGames(updated));
       }, 3000);
     });
+  }, []);
+
+  // Real playtime tracking via Electron process monitor
+  useEffect(() => {
+    if (!window.api?.onGameSessionEnded) return;
+    const cleanup = window.api.onGameSessionEnded((info: { gameId: string; durationMinutes: number; endedAt: string }) => {
+      setGames((prev) =>
+        prev.map((g) => {
+          if (g.id === info.gameId) {
+            const currentMins = g.stats.playtimeMinutes || 0;
+            const currentCount = g.stats.playCount || 0;
+            return {
+              ...g,
+              stats: {
+                ...g.stats,
+                playtimeMinutes: currentMins + info.durationMinutes,
+                playCount: currentCount + 1,
+                lastPlayed: info.endedAt
+              }
+            };
+          }
+          return g;
+        })
+      );
+      if (window.api?.recordActivitySession) {
+        const target = gamesRef.current.find((g) => g.id === info.gameId);
+        window.api.recordActivitySession({
+          id: `session_${Date.now()}`,
+          gameId: info.gameId,
+          gameTitle: target?.title || 'Game',
+          startTime: new Date(Date.now() - info.durationMinutes * 60000).toISOString(),
+          endTime: info.endedAt,
+          durationMinutes: info.durationMinutes,
+          date: info.endedAt.split('T')[0]
+        });
+      }
+    });
+    return () => cleanup?.();
   }, []);
 
   // Save changes
@@ -665,9 +680,9 @@ export const App: React.FC = () => {
       // Smart Volume Ducking for Jukebox
       jukeboxEngine.duckVolume();
 
-      // Pre-launch Auto-Save Snapshot
-      if (settings.autoSaveBackupOnLaunch !== false && window.api?.createSaveSnapshot) {
-        window.api.createSaveSnapshot(candidate.id, candidate.title, 'Auto backup before launch', true).catch(() => {});
+      // Pre-launch Auto-Save Snapshot via SaveVaultService
+      if (settings.autoSaveBackupOnLaunch !== false) {
+        SaveVaultService.autoBackupBeforeLaunch(candidate.id, candidate.title, (candidate as any).version).catch(() => {});
       }
 
       const res = await window.api.launchGame(candidate);
@@ -842,31 +857,6 @@ export const App: React.FC = () => {
     if (t) {
       ThemeEngine.applyGameTheme(t.colors.accent, t.colors.glow);
     }
-  };
-
-  // Profile Management & Startup Login
-  const handleSelectProfile = (profile: UserProfile) => {
-    setCurrentUser(profile);
-    setSettings((prev) => ({
-      ...prev,
-      globalTheme: profile.theme
-    }));
-    ThemeEngine.applyGlobalTheme(profile.theme);
-    const t = GLOBAL_THEMES[profile.theme];
-    if (t) {
-      ThemeEngine.applyGameTheme(t.colors.accent, t.colors.glow);
-    }
-    setIsLoggedIn(true);
-    showToast(`Welcome back, ${profile.name}!`);
-  };
-
-  const handleAddProfile = (newProfile: UserProfile) => {
-    setProfiles((prev) => {
-      const next = [...prev, newProfile];
-      StoreService.save(games, settings, next);
-      return next;
-    });
-    handleSelectProfile(newProfile);
   };
 
   // 8BitDo & Gamepad API Hookup (Silent, registered once)
@@ -1075,22 +1065,6 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Konami Cheat Code Tracker
-      const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-      const key = e.key.toLowerCase() === 'b' ? 'b' : e.key.toLowerCase() === 'a' ? 'a' : e.key;
-      const nextProgress = [...konamiProgress, key];
-      if (konamiSequence.slice(0, nextProgress.length).every((k, i) => k.toLowerCase() === nextProgress[i].toLowerCase())) {
-        if (nextProgress.length === konamiSequence.length) {
-          audioEngine.playLaunch();
-          setIsEasterEggOpen(true);
-          showToast('🎮 SQUAD PROTOCOL ACTIVATED: Welcome to the VIP Lounge!');
-          setKonamiProgress([]);
-        } else {
-          setKonamiProgress(nextProgress);
-        }
-      } else {
-        setKonamiProgress([key]);
-      }
 
       if (e.key === 'F1') {
         e.preventDefault();
@@ -1158,7 +1132,6 @@ export const App: React.FC = () => {
       settings.viewMode,
       isAnyModalOpen,
       dismissTopModal,
-      konamiProgress,
       handleTakeScreenshot,
       handleLaunchGame,
       showToast
@@ -1179,20 +1152,6 @@ export const App: React.FC = () => {
 
   if (!isLoaded) {
     return <div className="w-screen h-screen bg-[#07090e]" />;
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <LoginScreen
-        profiles={profiles}
-        onSelectProfile={handleSelectProfile}
-        onAddProfile={handleAddProfile}
-        activeInputMode={activeInputMode}
-        controllerDetails={controllerDetails}
-        gamepadConnected={gamepadConnected}
-        gamepadName={gamepadName}
-      />
-    );
   }
 
   return (
@@ -1224,12 +1183,10 @@ export const App: React.FC = () => {
         onOpenWhatToPlay={() => setIsWhatToPlayOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenNotes={() => setIsNotesOpen(true)}
-        onOpenEasterEgg={() => setIsEasterEggOpen(true)}
         onOpenJukebox={() => setIsJukeboxOpen(true)}
         onOpenActivity={() => setIsActivityOpen(true)}
         onOpenRetroHub={() => setIsRetroHubOpen(true)}
         onOpenMiniHud={() => setIsMiniHudOpen(true)}
-        onTimeExpired={() => showToast('🔔 Session Target Complete! Time to rest.')}
         sfxEnabled={settings.sfxEnabled}
         onToggleMute={() =>
           setSettings((prev) => ({ ...prev, sfxEnabled: !prev.sfxEnabled }))
@@ -1239,8 +1196,6 @@ export const App: React.FC = () => {
         gamepadConnected={gamepadConnected}
         gamepadName={gamepadName}
         hasRecentlyChangedInput={hasRecentlyChangedInput}
-        currentUser={currentUser}
-        onSwitchUser={() => setIsLoggedIn(false)}
       />
 
       {/* Resume Banner */}
@@ -1504,6 +1459,7 @@ export const App: React.FC = () => {
           onAddGame={handleAddGame}
           onAddBatchGames={handleAddBatchGames}
           apiKeys={settings.apiKeys}
+          existingGames={games}
         />
 
         <EditThemeModal
@@ -1526,6 +1482,10 @@ export const App: React.FC = () => {
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
           onResetLibrary={handleResetLibrary}
+          onRestoreLibrary={(restored) => {
+            setGames(restored);
+            showToast(`📦 Restored ${restored.length} game(s) to library!`);
+          }}
           games={games}
           onUpdateGame={handleUpdateGame}
           onBatchUpdateGames={handleBatchUpdateGames}
@@ -1589,10 +1549,6 @@ export const App: React.FC = () => {
       </Suspense>
 
       {/* Synchronous Modals & Drawers */}
-      <EasterEggModal
-        isOpen={isEasterEggOpen}
-        onClose={() => setIsEasterEggOpen(false)}
-      />
 
       <NotesDrawer
         key={isNotesOpen && games[selectedGameIndex] ? games[selectedGameIndex].id : 'notes-drawer-closed'}
@@ -1620,6 +1576,7 @@ export const App: React.FC = () => {
           setGamePendingRemoval(null);
         }}
       />
+      <ImportProgressBar />
       <ToastStack />
     </div>
   );
