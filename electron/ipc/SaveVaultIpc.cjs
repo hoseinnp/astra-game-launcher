@@ -4,6 +4,8 @@
  * Electron IPC Handlers for Save Game Vault & Auto-Backup
  * Supports scanning %APPDATA%, Documents/My Games, and Saved Games,
  * zipped archive creation via archiver with compression and active lock detection,
+ * 5-minute timeout protection for huge save directories (Promise.race),
+ * zip integrity verification before restoration,
  * safe snapshot rollbacks, retention enforcement (auto-deleting beyond keep count),
  * and progress event dispatching.
  */
@@ -214,23 +216,41 @@ function zipDirectory(sourceDir, outZipPath, onProgress) {
       zlib: { level: 9 } // Maximum compression
     });
 
+    let finished = false;
+
     output.on('close', () => {
-      resolve({
-        size: archive.pointer(),
-        filePath: outZipPath
-      });
+      if (!finished) {
+        finished = true;
+        resolve({
+          size: archive.pointer(),
+          filePath: outZipPath
+        });
+      }
     });
 
     archive.on('warning', (err) => {
       if (err.code === 'ENOENT') {
         console.warn('[SaveVaultIpc] Archiver warning:', err);
       } else {
-        reject(err);
+        if (!finished) {
+          finished = true;
+          reject(err);
+        }
       }
     });
 
     archive.on('error', (err) => {
-      reject(err);
+      if (!finished) {
+        finished = true;
+        reject(err);
+      }
+    });
+
+    output.on('error', (err) => {
+      if (!finished) {
+        finished = true;
+        reject(err);
+      }
     });
 
     if (typeof onProgress === 'function') {
@@ -252,6 +272,57 @@ function zipDirectory(sourceDir, outZipPath, onProgress) {
     }
 
     archive.finalize();
+  });
+}
+
+/**
+ * Verify zip file integrity before attempting restore
+ * - Check that file exists on disk
+ * - Check that file size > 0
+ * - Check that the zip archive isn't corrupted and contains at least 1 file
+ */
+function verifyZipIntegrity(zipPath) {
+  return new Promise((resolve, reject) => {
+    if (!zipPath || !fs.existsSync(zipPath)) {
+      return reject(new Error('Zip file not found on disk.'));
+    }
+
+    try {
+      const stat = fs.statSync(zipPath);
+      if (stat.size === 0) {
+        return reject(new Error('Zip file is empty (0 bytes).'));
+      }
+    } catch (statErr) {
+      return reject(new Error(`Unable to read zip file stats: ${statErr.message}`));
+    }
+
+    const { execFile } = require('child_process');
+    // Execute tar -tf to list entries and verify headers
+    execFile('tar', ['-tf', zipPath], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) {
+        // Fallback to powershell ZipFile check if tar returned non-zero
+        const escaped = zipPath.replace(/'/g, "''");
+        const psCmd = `Add-Type -AssemblyName System.IO.Compression.FileSystem; $z = [System.IO.Compression.ZipFile]::OpenRead('${escaped}'); $count = $z.Entries.Count; $z.Dispose(); $count`;
+        execFile('powershell', ['-NoProfile', '-Command', psCmd], (psErr, psOut) => {
+          if (psErr) {
+            return reject(new Error(`Zip archive is corrupted or unreadable: ${stderr || err.message}`));
+          }
+          const count = parseInt(psOut.trim(), 10);
+          if (isNaN(count) || count <= 0) {
+            return reject(new Error('Zip archive is valid but contains no files.'));
+          }
+          resolve(true);
+        });
+        return;
+      }
+
+      const files = stdout.trim().split(/\r?\n/).filter(line => line.trim().length > 0);
+      if (files.length === 0) {
+        return reject(new Error('Zip archive contains no files.'));
+      }
+
+      resolve(true);
+    });
   });
 }
 
@@ -302,9 +373,9 @@ function copyDirRecursiveSync(src, dest) {
 }
 
 /**
- * Core Backup Implementation
+ * Core Backup Implementation with 5-minute timeout protection
  */
-async function executeCreateBackup(app, { gameId, gameTitle, savePath, notes, gameVersion, isAuto, retentionCount = 5, customStorage, onProgress }) {
+async function executeCreateBackup(app, { gameId, gameTitle, savePath, notes, gameVersion, isAuto, retentionCount = 5, customStorage, onProgress, timeoutMs = 300000 }) {
   const strGameId = String(gameId);
   if (isLocked(strGameId)) {
     return { success: false, error: 'A backup or restore operation is already in progress for this game.' };
@@ -332,9 +403,32 @@ async function executeCreateBackup(app, { gameId, gameTitle, savePath, notes, ga
 
     if (onProgress) onProgress(10);
 
-    const zipResult = await zipDirectory(targetSavePath, zipFilePath, (p) => {
+    // Archiver timeout protection: 5 minutes (300,000ms) wrapped in Promise.race
+    const zipPromise = zipDirectory(targetSavePath, zipFilePath, (p) => {
       if (onProgress) onProgress(10 + Math.round(p * 0.8));
     });
+
+    let timeoutHandle;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error("Backup took too long — save folder may be too large"));
+      }, timeoutMs);
+    });
+
+    let zipResult;
+    try {
+      zipResult = await Promise.race([zipPromise, timeoutPromise]);
+    } catch (err) {
+      // Clean up partially written zip file if it timed out or failed
+      if (fs.existsSync(zipFilePath)) {
+        try {
+          fs.unlinkSync(zipFilePath);
+        } catch {}
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
 
     const stats = calculateDirStats(targetSavePath);
 
@@ -383,7 +477,7 @@ async function executeCreateBackup(app, { gameId, gameTitle, savePath, notes, ga
 }
 
 /**
- * Core Restore Implementation
+ * Core Restore Implementation with Zip Integrity Verification
  */
 async function executeRestoreBackup(app, { gameId, backupId, customStorage }) {
   const strGameId = String(gameId);
@@ -405,6 +499,17 @@ async function executeRestoreBackup(app, { gameId, backupId, customStorage }) {
       return { success: false, error: 'Backup zip file not found on disk.' };
     }
 
+    // 1. Verify zip integrity before attempting restore
+    try {
+      await verifyZipIntegrity(target.filePath);
+    } catch (verifyErr) {
+      console.error(`[SaveVaultIpc] Zip integrity verification failed for ${target.filePath}:`, verifyErr.message);
+      return {
+        success: false,
+        error: `Integrity check failed: ${verifyErr.message}. Restoration aborted to protect save files.`
+      };
+    }
+
     // Determine restore location
     const locations = scanSaveDirectories(target.gameTitle || '');
     const activeLoc = locations.find(l => l.exists) || locations[0];
@@ -418,7 +523,7 @@ async function executeRestoreBackup(app, { gameId, backupId, customStorage }) {
       copyDirRecursiveSync(activeLoc.path, safetyBackupDir);
     }
 
-    // Extract zip directly to active save folder
+    // Extract verified zip directly to active save folder
     await unzipArchive(target.filePath, activeLoc.path);
     console.log(`[SaveVaultIpc] Restored backup ${backupId} to ${activeLoc.path}`);
     return { success: true, restoredPath: activeLoc.path };
@@ -472,7 +577,7 @@ function registerSaveVaultIpc(ipcMain, app) {
     }
   });
 
-  // 3. Create zipped backup
+  // 3. Create zipped backup (with timeout protection)
   ipcMain.handle('savevault:create-backup', async (event, params) => {
     const sendProgress = (p) => {
       try {
@@ -510,7 +615,7 @@ function registerSaveVaultIpc(ipcMain, app) {
     return res;
   });
 
-  // 4. Restore backup from zip
+  // 4. Restore backup from zip (with integrity check)
   ipcMain.handle('savevault:restore-backup', async (_event, params) => {
     return executeRestoreBackup(app, params);
   });
@@ -520,7 +625,17 @@ function registerSaveVaultIpc(ipcMain, app) {
     return executeRestoreBackup(app, { gameId, backupId: snapshotId });
   });
 
-  // 5. Open vault storage folder
+  // 5. Verify zip integrity standalone endpoint
+  ipcMain.handle('savevault:verify-zip', async (_event, zipPath) => {
+    try {
+      await verifyZipIntegrity(zipPath);
+      return { success: true, valid: true };
+    } catch (err) {
+      return { success: false, valid: false, error: err.message };
+    }
+  });
+
+  // 6. Open vault storage folder
   ipcMain.handle('savevault:open-folder', async (_event, gameId, customStorage) => {
     try {
       const vaultDir = getVaultDir(app, gameId, customStorage);
@@ -531,7 +646,7 @@ function registerSaveVaultIpc(ipcMain, app) {
     }
   });
 
-  // 6. Delete specific backup
+  // 7. Delete specific backup
   ipcMain.handle('savevault:delete-backup', async (_event, { gameId, backupId, customStorage }) => {
     try {
       const vaultDir = getVaultDir(app, gameId, customStorage);
@@ -548,7 +663,7 @@ function registerSaveVaultIpc(ipcMain, app) {
     }
   });
 
-  // 7. Pick custom storage folder
+  // 8. Pick custom storage folder
   ipcMain.handle('savevault:pick-storage-folder', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory', 'createDirectory'],
@@ -566,6 +681,7 @@ module.exports = {
   scanSaveDirectories,
   executeCreateBackup,
   executeRestoreBackup,
+  verifyZipIntegrity,
   zipDirectory,
   unzipArchive
 };

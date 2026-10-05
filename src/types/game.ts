@@ -410,6 +410,7 @@ export interface ElectronAPI {
   }) => Promise<{ success: boolean; backup?: any; error?: string }>;
   restoreBackup?: (params: { gameId: string; backupId: string; customStorage?: string }) => Promise<{ success: boolean; restoredPath?: string; error?: string }>;
   deleteBackup?: (params: { gameId: string; backupId: string; customStorage?: string }) => Promise<{ success: boolean; error?: string }>;
+  verifyZipIntegrity?: (zipPath: string) => Promise<{ success: boolean; valid: boolean; error?: string }>;
   pickSaveStorageFolder?: () => Promise<string | null>;
   openSaveDirectory?: (gameId: string, customStorage?: string) => Promise<{ success: boolean; path?: string }>;
   onSaveVaultProgress?: (callback: (info: { gameId: string; progress: number }) => void) => () => void;

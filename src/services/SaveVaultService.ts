@@ -104,10 +104,43 @@ export const SaveVaultService = {
   },
 
   /**
+   * Verify zip file integrity before attempting restore
+   * Check that zip exists, isn't corrupted, and contains files
+   */
+  async verifyZipIntegrity(zipPath: string): Promise<boolean> {
+    if (!zipPath) return false;
+    if (window.api?.verifyZipIntegrity) {
+      try {
+        const res = await window.api.verifyZipIntegrity(zipPath);
+        return Boolean(res?.success && res?.valid);
+      } catch (err) {
+        console.error('[SaveVaultService] verifyZipIntegrity error:', err);
+        return false;
+      }
+    }
+    // Fallback: If running outside Electron, verify path is non-empty string
+    return Boolean(zipPath && zipPath.endsWith('.zip'));
+  },
+
+  /**
    * Restore a backup from zip archive
    */
   async restoreBackup(gameId: string, backupId: string): Promise<{ success: boolean; error?: string }> {
     const settings = this.getSettings();
+
+    // Verify zip file integrity before attempting restore
+    const backups = await this.listBackups(gameId);
+    const target = backups.find((b) => b.id === backupId);
+    if (target && target.filePath) {
+      const isValid = await this.verifyZipIntegrity(target.filePath);
+      if (!isValid) {
+        return {
+          success: false,
+          error: 'Zip file integrity verification failed: Archive is corrupted, empty, or unreadable. Restoration aborted.'
+        };
+      }
+    }
+
     if (window.api?.restoreBackup) {
       return await window.api.restoreBackup({
         gameId,

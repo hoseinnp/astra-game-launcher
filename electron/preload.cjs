@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('api', {
   createBackup: (params) => ipcRenderer.invoke('savevault:create-backup', params),
   restoreBackup: (params) => ipcRenderer.invoke('savevault:restore-backup', params),
   deleteBackup: (params) => ipcRenderer.invoke('savevault:delete-backup', params),
+  verifyZipIntegrity: (zipPath) => ipcRenderer.invoke('savevault:verify-zip', zipPath),
   pickSaveStorageFolder: () => ipcRenderer.invoke('savevault:pick-storage-folder'),
   openSaveDirectory: (gameId, customStorage) => ipcRenderer.invoke('savevault:open-folder', gameId, customStorage),
   onSaveVaultProgress: (callback) => {

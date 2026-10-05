@@ -393,7 +393,7 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] text-white/40 mt-1 font-mono">
+                        <div className="flex items-center gap-3 text-[11px] text-white/40 mt-1 font-mono flex-wrap">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3 text-white/30" />
                             {new Date(bk.timestamp).toLocaleString([], {
@@ -410,6 +410,12 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
                               <span>•</span>
                               <span>{bk.fileCount} files</span>
                             </>
+                          )}
+                          {bk.size > 5 * 1024 * 1024 && (
+                            <span className="inline-flex items-center gap-1 text-amber-400 font-sans font-medium text-[11px] bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/25">
+                              <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              <span>Large backup — restore may take time</span>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -575,9 +581,17 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] font-mono text-white/40 mt-1">
-                          {new Date(bk.timestamp).toLocaleString()} • {formatSize(bk.size)}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-[11px] font-mono text-white/40">
+                            {new Date(bk.timestamp).toLocaleString()} • {formatSize(bk.size)}
+                          </p>
+                          {bk.size > 5 * 1024 * 1024 && (
+                            <span className="inline-flex items-center gap-1 text-amber-400 font-sans font-medium text-[11px] bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/25">
+                              <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              <span>Large backup — restore may take time</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <button
