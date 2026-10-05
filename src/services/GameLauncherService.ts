@@ -1,6 +1,7 @@
 import type { Game } from '../types/game';
 import { AudioService } from './AudioService';
 import { SaveVaultService } from './SaveVaultService';
+import { ActivityTrackingService } from './ActivityTrackingService';
 
 export interface LaunchGameOptions {
   autoBackup?: boolean;
@@ -30,8 +31,11 @@ class GameLauncherServiceClass {
     if (this.sessionEndListenerRegistered) return;
 
     this.sessionEndListenerRegistered = true;
-    window.api.onGameSessionEnded(({ gameId }) => {
+    window.api.onGameSessionEnded(({ gameId, durationMinutes }) => {
       this.activeGameSessions.delete(gameId);
+      // Auto-save session tracking on game close
+      ActivityTrackingService.logClose(gameId, durationMinutes);
+
       // When all active game sessions have closed, restore volume
       if (this.activeGameSessions.size === 0) {
         this.onGameClosed(gameId);
@@ -40,13 +44,16 @@ class GameLauncherServiceClass {
   }
 
   /**
-   * Launch a game, trigger volume ducking and auto-backup
+   * Launch a game, trigger volume ducking, auto-backup, and activity logging
    */
   public async launchGame(game: Game, options?: LaunchGameOptions): Promise<LaunchGameResult> {
     const shouldDuck = options?.duckVolume !== false;
     const shouldBackup = options?.autoBackup !== false;
 
-    // 1. Call AudioService.duckVolume() when game launches
+    // 1. Log game session launch in ActivityTrackingService
+    ActivityTrackingService.logLaunch(game.id, game.title);
+
+    // 2. Call AudioService.duckVolume() when game launches
     if (shouldDuck) {
       AudioService.duckVolume();
     }

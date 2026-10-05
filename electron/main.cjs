@@ -2342,40 +2342,77 @@ registerSaveVaultIpc(ipcMain, app);
 // =========================================================================
 // ASTRA V3: GAMING ACTIVITY HISTORY & PLAYTIME LOG
 // =========================================================================
-function getActivityLogPath() {
+function getSessionsFilePath() {
+  return path.join(app.getPath('userData'), 'sessions.json');
+}
+
+function getLegacyActivityLogPath() {
   return path.join(app.getPath('userData'), 'activity_history.json');
 }
 
-function readActivityLog() {
-  const file = getActivityLogPath();
-  if (!fs.existsSync(file)) return [];
-  try {
-    const list = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
+function readActivitySessions() {
+  const sessionsFile = getSessionsFilePath();
+  const legacyFile = getLegacyActivityLogPath();
+
+  if (fs.existsSync(sessionsFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(sessionsFile, 'utf-8'));
+      if (data && Array.isArray(data.sessions)) return data.sessions;
+      if (Array.isArray(data)) return data;
+    } catch {}
   }
+
+  // Fallback to legacy file if exists
+  if (fs.existsSync(legacyFile)) {
+    try {
+      const list = JSON.parse(fs.readFileSync(legacyFile, 'utf-8'));
+      if (Array.isArray(list)) {
+        // Normalize
+        return list.map((s) => ({
+          id: s.id,
+          gameId: s.gameId,
+          gameName: s.gameTitle || s.gameName || 'Game Session',
+          startTime: s.startTime,
+          endTime: s.endTime,
+          duration: s.durationMinutes ?? s.duration ?? 0,
+          launchCount: 1
+        }));
+      }
+    } catch {}
+  }
+
+  return [];
 }
 
-function writeActivityLog(list) {
+function writeActivitySessions(sessions) {
   try {
-    fs.writeFileSync(getActivityLogPath(), JSON.stringify(list, null, 2), 'utf-8');
+    const filePath = getSessionsFilePath();
+    fs.writeFileSync(filePath, JSON.stringify({ sessions }, null, 2), 'utf-8');
   } catch (err) {
-    console.error('[Astra Activity] Error writing log:', err);
+    console.error('[Astra Activity] Error writing sessions.json:', err);
   }
 }
 
 ipcMain.handle('activity:get-log', async () => {
-  return readActivityLog();
+  return readActivitySessions();
 });
 
 ipcMain.handle('activity:record-session', async (_event, session) => {
   try {
-    const list = readActivityLog();
-    list.unshift(session);
-    // Keep max 500 session records
-    if (list.length > 500) list.length = 500;
-    writeActivityLog(list);
+    const list = readActivitySessions();
+    const normalized = {
+      id: session.id || `sess_${Date.now()}`,
+      gameId: session.gameId,
+      gameName: session.gameName || session.gameTitle || 'Game Session',
+      startTime: session.startTime,
+      endTime: session.endTime,
+      duration: session.duration ?? session.durationMinutes ?? 0,
+      launchCount: session.launchCount ?? 1
+    };
+    list.unshift(normalized);
+    // Keep last 1000 session records
+    if (list.length > 1000) list.length = 1000;
+    writeActivitySessions(list);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
