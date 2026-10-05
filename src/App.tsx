@@ -22,6 +22,7 @@ import type { ControllerDetails } from './utils/deviceDetector';
 import type { UserProfile } from './types/game';
 import { InputModeToast, type InputModeToastData } from './components/layout/InputModeToast';
 import { jukeboxEngine } from './services/jukeboxEngine';
+import { AudioService } from './services/AudioService';
 import { hapticsService } from './services/hapticsService';
 import { SaveVaultService } from './services/SaveVaultService';
 
@@ -621,6 +622,7 @@ export const App: React.FC = () => {
       const unsubscribe = window.api.onGameSessionEnded(({ gameId, durationMinutes, endedAt }) => {
         // Restore Jukebox volume
         jukeboxEngine.restoreVolume();
+        AudioService.restoreVolume();
 
         // Record to Activity History
         if (window.api?.recordActivitySession) {
@@ -679,6 +681,7 @@ export const App: React.FC = () => {
     if (window.api?.launchGame) {
       // Smart Volume Ducking for Jukebox
       jukeboxEngine.duckVolume();
+      AudioService.duckVolume();
 
       // Pre-launch Auto-Save Snapshot via SaveVaultService
       if (settings.autoSaveBackupOnLaunch !== false) {
@@ -689,6 +692,7 @@ export const App: React.FC = () => {
       if (!res.success && res.error) {
         showToast(`Launch failed: ${res.error}`);
         jukeboxEngine.restoreVolume();
+        AudioService.restoreVolume();
         return;
       }
     }
