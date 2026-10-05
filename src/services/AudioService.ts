@@ -213,17 +213,17 @@ class AudioServiceClass {
     return this.analyser;
   }
 
-  public getFrequencyData(array: Uint8Array<ArrayBuffer>): void {
+  public getFrequencyData(array: Uint8Array): void {
     if (this.analyser) {
-      this.analyser.getByteFrequencyData(array);
+      this.analyser.getByteFrequencyData(array as any);
     } else {
       array.fill(0);
     }
   }
 
-  public getTimeDomainData(array: Uint8Array<ArrayBuffer>): void {
+  public getTimeDomainData(array: Uint8Array): void {
     if (this.analyser) {
-      this.analyser.getByteTimeDomainData(array);
+      this.analyser.getByteTimeDomainData(array as any);
     } else {
       array.fill(128);
     }

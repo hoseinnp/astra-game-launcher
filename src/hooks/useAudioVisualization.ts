@@ -7,8 +7,8 @@ export function useAudioVisualization(
   mode: VisualizerDisplayMode = 'bars'
 ) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const dataArrayRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(config?.barCount || 64));
-  const timeArrayRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(128));
+  const dataArrayRef = useRef<Uint8Array>(new Uint8Array(config?.barCount || 64));
+  const timeArrayRef = useRef<Uint8Array>(new Uint8Array(128));
 
   useEffect(() => {
     const unsub = AudioService.subscribe((state) => {

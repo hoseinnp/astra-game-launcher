@@ -2,20 +2,25 @@ import React, { useRef, useEffect } from 'react';
 import type { VisualizerDisplayMode } from '../types/Audio.types';
 import { useAudioVisualization } from '../hooks/useAudioVisualization';
 
-interface AudioVisualizerProps {
-  mode?: VisualizerDisplayMode;
+export interface AudioVisualizerProps {
+  mode?: VisualizerDisplayMode | 'bars' | 'wave' | 'pulsar';
+  color?: string;
   accentColor?: string;
   className?: string;
 }
 
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   mode = 'bars',
-  accentColor = '#2ee5ba',
+  color,
+  accentColor,
   className = ''
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
-  const { getFrequencyData, getTimeDomainData, isPlaying } = useAudioVisualization({ barCount: 64 }, mode);
+  const { getFrequencyData, getTimeDomainData, isPlaying } = useAudioVisualization({ barCount: 64 }, mode as VisualizerDisplayMode);
+
+  // Support both `color` and `accentColor` prop
+  const activeColor = color || accentColor || '#2ee5ba';
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -48,6 +53,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
+      // Get real-time frequency and time-domain data from hook
       const freqData = getFrequencyData();
       const timeData = getTimeDomainData();
 
@@ -60,16 +66,17 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           const y = height / 2 + Math.sin(x * 0.03 + time) * 4;
           ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = `${accentColor}33`;
+        ctx.strokeStyle = `${activeColor}40`;
         ctx.lineWidth = 1.5;
         ctx.stroke();
         return;
       }
 
       if (mode === 'bars') {
+        // Mode 1: Frequency Bars
         const barCount = 48;
         const totalGap = 4;
-        const barWidth = (width - barCount * totalGap) / barCount;
+        const barWidth = Math.max(2, (width - barCount * totalGap) / barCount);
 
         for (let i = 0; i < barCount; i++) {
           const dataIndex = Math.floor((i / barCount) * freqData.length);
@@ -80,15 +87,19 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           const x = i * (barWidth + totalGap);
           const y = height - barHeight;
 
-          // Reactive gradient matching game theme palette
+          // Reactive gradient colored using the `color` prop
           const grad = ctx.createLinearGradient(0, y, 0, height);
-          grad.addColorStop(0, accentColor);
-          grad.addColorStop(0.5, `${accentColor}cc`);
-          grad.addColorStop(1, `${accentColor}22`);
+          grad.addColorStop(0, activeColor);
+          grad.addColorStop(0.6, `${activeColor}cc`);
+          grad.addColorStop(1, `${activeColor}22`);
 
           ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.roundRect?.(x, y, barWidth, barHeight, [3, 3, 0, 0]);
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, y, barWidth, barHeight, [3, 3, 0, 0]);
+          } else {
+            ctx.rect(x, y, barWidth, barHeight);
+          }
           ctx.fill();
 
           // Highlight top tip
@@ -96,7 +107,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           ctx.fillRect(x, y, barWidth, 1.5);
         }
       } else if (mode === 'wave') {
-        // Waveform display
+        // Mode 2: Waveform
         ctx.beginPath();
         const sliceWidth = width / timeData.length;
         let x = 0;
@@ -113,28 +124,29 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           x += sliceWidth;
         }
 
-        ctx.strokeStyle = accentColor;
+        ctx.strokeStyle = activeColor;
         ctx.lineWidth = 2.5;
-        ctx.shadowColor = accentColor;
+        ctx.shadowColor = activeColor;
         ctx.shadowBlur = 8;
         ctx.stroke();
         ctx.shadowBlur = 0;
       } else if (mode === 'pulsar') {
-        // Center pulsar orb
+        // Mode 3: Center Pulsar Orb
         const centerX = width / 2;
         const centerY = height / 2;
         let avg = 0;
-        for (let i = 0; i < 32; i++) {
+        const sampleCount = Math.min(32, freqData.length);
+        for (let i = 0; i < sampleCount; i++) {
           avg += freqData[i] || 0;
         }
-        avg = avg / 32;
+        avg = sampleCount > 0 ? avg / sampleCount : 0;
         const baseRadius = 15;
         const pulseRadius = baseRadius + (avg / 255) * 35;
 
         // Outer glow
         const glow = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, pulseRadius * 1.6);
-        glow.addColorStop(0, `${accentColor}99`);
-        glow.addColorStop(0.7, `${accentColor}33`);
+        glow.addColorStop(0, `${activeColor}99`);
+        glow.addColorStop(0.7, `${activeColor}33`);
         glow.addColorStop(1, 'transparent');
 
         ctx.fillStyle = glow;
@@ -143,7 +155,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         ctx.fill();
 
         // Core orb
-        ctx.fillStyle = accentColor;
+        ctx.fillStyle = activeColor;
         ctx.beginPath();
         ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -158,7 +170,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [mode, accentColor, isPlaying, getFrequencyData, getTimeDomainData]);
+  }, [mode, activeColor, isPlaying, getFrequencyData, getTimeDomainData]);
 
   return (
     <div className={`relative w-full h-full flex items-center justify-center overflow-hidden ${className}`}>

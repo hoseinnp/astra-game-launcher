@@ -206,7 +206,7 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
         <div className="relative h-44 bg-black/60 border-b border-white/10 flex flex-col justify-end p-4 overflow-hidden group">
           {/* Active Canvas Visualizer */}
           <div className="absolute inset-0">
-            <AudioVisualizer mode={visualizerMode} accentColor={effectiveThemeColor} />
+            <AudioVisualizer mode={visualizerMode} color={effectiveThemeColor} />
           </div>
 
           {/* Visualizer mode switcher */}
