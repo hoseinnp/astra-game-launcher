@@ -24,3 +24,8 @@ scratch
 *.njsproj
 *.sln
 *.sw?
+
+astra-game-launcher/
+
+.agents/
+

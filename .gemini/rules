@@ -1,0 +1,33 @@
+# Astra Game Launcher Workspace Rules
+
+## Git Automation
+After generating, modifying, or fixing code:
+1. Review the changes with `git status` and `git diff`
+2. Stage changes: `git add .`
+3. Commit with a descriptive message: `git commit -m "feat: description"` or `git commit -m "fix: description"`
+4. Push to the current branch: `git push origin HEAD`
+5. Always push unless explicitly told "don't commit yet"
+
+## Branch Naming
+- Feature branches: `feat/feature-name`
+- Bug fixes: `fix/bug-name`
+- Refactoring: `refactor/component-name`
+- Documentation: `docs/what-changed`
+
+## Commit Message Format
+- `feat: add new feature` (new functionality)
+- `fix: resolve bug in X` (bug fix)
+- `refactor: simplify component Y` (code improvement)
+- `docs: update README` (documentation)
+
+## Project Context
+- **Type:** Electron + React 19 Game Launcher
+- **Frontend:** React, TypeScript, Vite
+- **Backend:** Electron IPC, Node.js
+- **Main Repo:** https://github.com/hoseinnp/astra-game-launcher
+- **Reviewer:** Claude (via GitHub MCP integration)
+
+## When Reviewer Asks for Changes
+1. Make the requested modifications
+2. Commit and push to the same branch
+3. Claude will fetch the updated branch automatically
