@@ -24,13 +24,15 @@ interface JukeboxModalProps {
   onClose: () => void;
   accentColor?: string;
   gameThemeColor?: string;
+  onShowToast?: (message: string) => void;
 }
 
 export const JukeboxModal: React.FC<JukeboxModalProps> = ({
   isOpen,
   onClose,
   accentColor = '#2ee5ba',
-  gameThemeColor
+  gameThemeColor,
+  onShowToast
 }) => {
   const [audioState, setAudioState] = useState<AudioServiceState>(AudioService.getState());
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,6 +74,14 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
     try {
       const filePath = await window.api.pickAudio();
       if (filePath) {
+        // Validate audio format extension
+        const validExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac', '.opus'];
+        const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
+        if (!validExtensions.includes(ext)) {
+          onShowToast?.(`⚠️ Unsupported audio format (${ext}). Supported: MP3, WAV, OGG, FLAC, M4A`);
+          return;
+        }
+
         audioEngine.playSelect();
         const fileName = filePath.split(/[/\\]/).pop() || 'Custom Track';
         const cleanTitle = fileName.replace(/\.[^/.]+$/, '');
@@ -85,17 +95,20 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
           source: 'local'
         };
         AudioService.addTrack(newTrack, true);
+        onShowToast?.(`🎵 Added "${cleanTitle}" to Jukebox`);
       }
     } catch (err) {
       console.error('[JukeboxModal] Failed to pick audio:', err);
+      onShowToast?.('❌ Error loading audio file');
     }
   };
 
   const handleAddCustomTrack = () => {
     if (!newTrackTitle.trim()) return;
+    const title = newTrackTitle.trim();
     const newTrack: Track = {
       id: `custom_${Date.now()}`,
-      title: newTrackTitle.trim(),
+      title,
       gameId: newTrackGameId.trim() || 'custom-game',
       artist: 'Astra Audio Studio',
       duration: 180,
@@ -103,6 +116,7 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
       filePath: 'synth:custom'
     };
     AudioService.addTrack(newTrack, true);
+    onShowToast?.(`🎵 Added "${title}" to Jukebox`);
     setNewTrackTitle('');
     setNewTrackGameId('');
     setShowAddForm(false);
@@ -463,6 +477,7 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           AudioService.removeTrack(track.id);
+                          onShowToast?.(`🗑️ Removed "${track.title}" from playlist`);
                         }}
                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/20 text-white/40 hover:text-rose-400 transition-all cursor-pointer"
                         title="Remove track"

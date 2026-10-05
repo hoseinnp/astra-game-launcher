@@ -28,28 +28,45 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    let currentWidth = 480;
+    let currentHeight = 140;
+
+    // High-DPI responsive canvas sizing
     const updateCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
       const displayWidth = Math.round(rect.width || 480);
       const displayHeight = Math.round(rect.height || 140);
 
-      if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
-        canvas.width = displayWidth * dpr;
-        canvas.height = displayHeight * dpr;
+      currentWidth = displayWidth;
+      currentHeight = displayHeight;
+
+      const physicalWidth = Math.round(displayWidth * dpr);
+      const physicalHeight = Math.round(displayHeight * dpr);
+
+      if (canvas.width !== physicalWidth || canvas.height !== physicalHeight) {
+        canvas.width = physicalWidth;
+        canvas.height = physicalHeight;
       }
-      ctx.resetTransform?.();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     updateCanvasSize();
+
+    // Use ResizeObserver for accurate container dimension tracking
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
+      resizeObserver = new ResizeObserver(() => {
+        updateCanvasSize();
+      });
+      resizeObserver.observe(canvas.parentElement);
+    }
     window.addEventListener('resize', updateCanvasSize);
 
     const render = () => {
       animFrameRef.current = requestAnimationFrame(render);
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width || 480;
-      const height = rect.height || 140;
+      const width = currentWidth;
+      const height = currentHeight;
 
       ctx.clearRect(0, 0, width, height);
 
@@ -166,6 +183,9 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
     return () => {
       window.removeEventListener('resize', updateCanvasSize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }

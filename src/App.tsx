@@ -1509,6 +1509,7 @@ export const App: React.FC = () => {
           isOpen={isJukeboxOpen}
           onClose={() => setIsJukeboxOpen(false)}
           accentColor={games[selectedGameIndex]?.theme?.accentColor || '#2ee5ba'}
+          onShowToast={showToast}
         />
 
         {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
