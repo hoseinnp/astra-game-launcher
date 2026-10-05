@@ -22,8 +22,8 @@ import type { ControllerDetails } from './utils/deviceDetector';
 import type { UserProfile } from './types/game';
 import { InputModeToast, type InputModeToastData } from './components/layout/InputModeToast';
 import { jukeboxEngine } from './services/jukeboxEngine';
+import { GameLauncherService } from './services/GameLauncherService';
 import { hapticsService } from './services/hapticsService';
-import { SaveVaultService } from './services/SaveVaultService';
 
 // Code-split heavy views and secondary modals with React.lazy
 const PhysicalShelfView = lazy(() => import('./components/dashboard/PhysicalShelfView').then(m => ({ default: m.PhysicalShelfView })));
@@ -621,6 +621,7 @@ export const App: React.FC = () => {
       const unsubscribe = window.api.onGameSessionEnded(({ gameId, durationMinutes, endedAt }) => {
         // Restore Jukebox volume
         jukeboxEngine.restoreVolume();
+        GameLauncherService.onGameClosed(gameId);
 
         // Record to Activity History
         if (window.api?.recordActivitySession) {
@@ -677,18 +678,14 @@ export const App: React.FC = () => {
     const { updatedGame, newlyUnlocked } = AchievementEngine.evaluateMilestones(candidate, true);
 
     if (window.api?.launchGame) {
-      // Smart Volume Ducking for Jukebox
-      jukeboxEngine.duckVolume();
+      // Launch game with pre-launch auto-backup and volume ducking via GameLauncherService
+      const res = await GameLauncherService.launchGame(candidate, {
+        autoBackup: settings.autoSaveBackupOnLaunch !== false,
+        duckVolume: true
+      });
 
-      // Pre-launch Auto-Save Snapshot via SaveVaultService
-      if (settings.autoSaveBackupOnLaunch !== false) {
-        SaveVaultService.autoBackupBeforeLaunch(candidate.id, candidate.title, (candidate as any).version).catch(() => {});
-      }
-
-      const res = await window.api.launchGame(candidate);
       if (!res.success && res.error) {
         showToast(`Launch failed: ${res.error}`);
-        jukeboxEngine.restoreVolume();
         return;
       }
     }
@@ -1512,6 +1509,7 @@ export const App: React.FC = () => {
           isOpen={isJukeboxOpen}
           onClose={() => setIsJukeboxOpen(false)}
           accentColor={games[selectedGameIndex]?.theme?.accentColor || '#2ee5ba'}
+          onShowToast={showToast}
         />
 
         {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
