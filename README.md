@@ -45,33 +45,32 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 
 ---
 
-## 🚀 Getting Started
+## 💾 Installation
 
-### Prerequisites
-- Node.js (v18+ recommended)
-- npm or yarn
+### Option 1: Installer (Recommended)
+1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
+2. Download the latest `Astra Game Launcher-X.X.X.exe` (full installer)
+3. Run the installer and follow the prompts
+4. Astra will be installed to your Program Files
+5. A desktop shortcut will be created automatically
 
-### Installation
+### Option 2: Portable (No Installation)
+1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
+2. Download the latest `Astra Game Launcher-X.X.X-portable.exe`
+3. Run directly from anywhere (USB stick, Downloads, etc.)
+4. No installation required, no registry changes
+
+### Option 3: Build from Source
 ```bash
-# Clone the repository
 git clone https://github.com/[USERNAME]/astra-game-launcher.git
 cd astra-game-launcher
-
-# Install dependencies
 npm install
+npm run dev          # Development
+npm run build        # Production build
+npm run dist:win     # Create installers
 ```
 
-### Running in Development
-```bash
-# Run web preview
-npm run dev:web
-
-# Run full Electron app in dev mode
-npm run dev
-```
-
-### Building for Production
-```bash
-# Build desktop installer and portable executable
-npm run dist
-```
+## ⚙️ System Requirements
+- Windows 10 or later
+- 200 MB disk space
+- 512 MB RAM minimum

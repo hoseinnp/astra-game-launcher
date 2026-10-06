@@ -9,9 +9,15 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-electron
+dist-release
 dist-ssr
 release
+out
 scratch
+*.exe
+*.dmg
+*.zip
 *.local
 
 # Editor directories and files

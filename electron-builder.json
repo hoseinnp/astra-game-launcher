@@ -1,0 +1,35 @@
+{
+  "appId": "com.astra.launcher",
+  "productName": "Astra Game Launcher",
+  "directories": {
+    "buildResources": "public",
+    "output": "dist-release"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Astra Game Launcher"
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-portable.exe"
+  }
+}
