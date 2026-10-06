@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Play, Clock, Star, X, Dices } from 'lucide-react';
+import { Search, Play, Clock, Star, X, Compass } from 'lucide-react';
 import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 
@@ -9,7 +9,7 @@ interface CommandPaletteProps {
   games: Game[];
   onLaunchGame: (game: Game) => void;
   onSelectGame: (index: number) => void;
-  onOpenWhatToPlay?: () => void;
+  onOpenRecommendations?: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -18,7 +18,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   games,
   onLaunchGame,
   onSelectGame,
-  onOpenWhatToPlay
+  onOpenRecommendations
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -98,21 +98,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           </button>
         </div>
 
-        {/* Quick Suggest Option */}
-        {onOpenWhatToPlay && !query && (
+        {/* Quick Recommendations / Discover Option */}
+        {onOpenRecommendations && !query && (
           <div
             onClick={() => {
               audioEngine.playSelect();
               onClose();
-              onOpenWhatToPlay();
+              onOpenRecommendations();
             }}
-            className="m-2 p-3 rounded-xl bg-gradient-to-r from-amber-500/15 via-[var(--game-accent,#2ee5ba)]/20 to-cyan-500/15 border border-[var(--game-accent,#2ee5ba)]/30 hover:border-[var(--game-accent,#2ee5ba)]/60 cursor-pointer flex items-center justify-between transition-all group"
+            className="m-2 p-3 rounded-xl bg-gradient-to-r from-cyan-500/15 via-indigo-500/15 to-cyan-500/15 border border-cyan-500/30 hover:border-cyan-500/60 cursor-pointer flex items-center justify-between transition-all group"
           >
             <div className="flex items-center gap-2.5 text-xs text-white">
-              <Dices className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              <Compass className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
               <div>
-                <span className="font-bold text-[var(--game-accent,#2ee5ba)]">What should I play?</span>
-                <span className="text-white/60 text-[11px] ml-2 hidden sm:inline">Launch Decision Engine & Roulette</span>
+                <span className="font-bold text-cyan-300">Discover & Recommendations</span>
+                <span className="text-white/60 text-[11px] ml-2 hidden sm:inline">AI suggestions for unplayed games</span>
               </div>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-white/80 font-bold border border-white/20">

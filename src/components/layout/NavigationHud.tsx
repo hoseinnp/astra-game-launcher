@@ -9,7 +9,7 @@ interface NavigationHudProps {
   onLaunch?: () => void;
   onOpenDetails?: () => void;
   onOpenNotes?: () => void;
-  onOpenWhatToPlay?: () => void;
+  onOpenRecommendations?: () => void;
   onToggleViewMode?: () => void;
   onToggleDensity?: () => void;
   onOpenSearch?: () => void;
@@ -24,7 +24,7 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
   onLaunch,
   onOpenDetails,
   onOpenNotes,
-  onOpenWhatToPlay,
+  onOpenRecommendations,
   onToggleViewMode,
   onToggleDensity,
   onOpenSearch,
@@ -34,7 +34,7 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
   const isController = activeInputMode === 'controller';
 
   // Render platform specific button glyphs
-  const renderGlyph = (actionKey: 'CONFIRM' | 'DETAILS' | 'NOTES' | 'SUGGEST' | 'BUMPERS' | 'VIEW_TOGGLE' | 'DENSITY' | 'SEARCH' | 'SETTINGS') => {
+  const renderGlyph = (actionKey: 'CONFIRM' | 'DETAILS' | 'NOTES' | 'RECOMMEND' | 'BUMPERS' | 'VIEW_TOGGLE' | 'DENSITY' | 'SEARCH' | 'SETTINGS') => {
     if (!isController) {
       // Keyboard Keycaps
       switch (actionKey) {
@@ -56,9 +56,9 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
               F1
             </kbd>
           );
-        case 'SUGGEST':
+        case 'RECOMMEND':
           return (
-            <kbd className="px-1.5 py-0.5 min-w-[20px] text-center rounded bg-amber-400/20 text-amber-300 font-mono font-bold text-[10px] border border-amber-400/40 shadow-sm">
+            <kbd className="px-1.5 py-0.5 min-w-[20px] text-center rounded bg-cyan-400/20 text-cyan-300 font-mono font-bold text-[10px] border border-cyan-400/40 shadow-sm">
               R
             </kbd>
           );
@@ -111,9 +111,9 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
               △
             </span>
           );
-        case 'SUGGEST':
+        case 'RECOMMEND':
           return (
-            <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(245,158,11,0.7)] border border-white/40">
+            <span className="w-5 h-5 rounded-full bg-cyan-500 text-slate-900 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(6,182,212,0.7)] border border-white/40">
               R
             </span>
           );
@@ -166,9 +166,9 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
               X
             </span>
           );
-        case 'SUGGEST':
+        case 'RECOMMEND':
           return (
-            <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(245,158,11,0.7)] border border-white/40">
+            <span className="w-5 h-5 rounded-full bg-cyan-400 text-slate-900 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(6,182,212,0.7)] border border-white/40">
               R
             </span>
           );
@@ -220,9 +220,9 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
             Y
           </span>
         );
-      case 'SUGGEST':
+      case 'RECOMMEND':
         return (
-          <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(245,158,11,0.7)] border border-white/40">
+          <span className="w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(6,182,212,0.7)] border border-white/40">
             Y
           </span>
         );
@@ -320,16 +320,16 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
         </>
       )}
 
-      {/* Suggest / What to Play */}
-      {onOpenWhatToPlay && (
+      {/* AI Recommendations / Discover */}
+      {onOpenRecommendations && (
         <>
           <span className="w-1 h-3 border-r border-white/15" />
           <button
-            onClick={onOpenWhatToPlay}
-            className="flex items-center gap-1.5 text-amber-300 hover:text-white transition-colors cursor-pointer group"
+            onClick={onOpenRecommendations}
+            className="flex items-center gap-1.5 text-cyan-300 hover:text-white transition-colors cursor-pointer group"
           >
-            {renderGlyph('SUGGEST')}
-            <span className="font-semibold tracking-wide text-[11px]">Suggest</span>
+            {renderGlyph('RECOMMEND')}
+            <span className="font-semibold tracking-wide text-[11px]">Discover</span>
           </button>
         </>
       )}

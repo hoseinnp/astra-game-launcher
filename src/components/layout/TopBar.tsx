@@ -11,12 +11,12 @@ import {
   Volume2,
   VolumeX,
   BookOpen,
-  Dices,
   Disc,
   Music,
   BarChart2,
   Zap,
-  Activity
+  Activity,
+  Compass
 } from 'lucide-react';
 import type { ViewMode } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
@@ -29,7 +29,7 @@ interface TopBarProps {
   onToggleViewMode: () => void;
   onOpenSearch: () => void;
   onOpenAddModal: () => void;
-  onOpenWhatToPlay?: () => void;
+  onOpenRecommendations?: () => void;
   onOpenSettings: () => void;
   onOpenNotes: () => void;
   onOpenJukebox?: () => void;
@@ -50,7 +50,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleViewMode,
   onOpenSearch,
   onOpenAddModal,
-  onOpenWhatToPlay,
+  onOpenRecommendations,
   onOpenSettings,
   onOpenNotes,
   onOpenJukebox,
@@ -332,18 +332,18 @@ export const TopBar: React.FC<TopBarProps> = ({
           {sfxEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-400" />}
         </button>
 
-        {/* What to Play? Suggester Button */}
-        {onOpenWhatToPlay && (
+        {/* AI Recommendations Hub */}
+        {onOpenRecommendations && (
           <button
             onClick={() => {
               audioEngine.playSelect();
-              onOpenWhatToPlay();
+              onOpenRecommendations();
             }}
-            title="What to Play? Decision Engine & Roulette (R or Gamepad Y)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400/20 via-[var(--game-accent,#2ee5ba)]/25 to-cyan-400/20 border border-[var(--game-accent,#2ee5ba)]/40 text-[var(--game-accent,#2ee5ba)] hover:text-white hover:bg-[var(--game-accent,#2ee5ba)]/30 hover:shadow-[0_0_15px_var(--game-glow)] transition-all cursor-pointer text-xs font-bold shadow-sm"
+            title="AI Game Recommendations & Playstyle DNA"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-cyan-300 hover:text-white hover:bg-cyan-500/25 transition-all cursor-pointer text-xs font-bold shadow-sm"
           >
-            <Dices className="w-4 h-4 text-amber-300" />
-            <span className="hidden md:inline tracking-wide">What to Play?</span>
+            <Compass className="w-4 h-4 text-cyan-400" />
+            <span className="hidden lg:inline tracking-wide">Discover</span>
           </button>
         )}
 

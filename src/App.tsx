@@ -43,7 +43,7 @@ const AddGameModal = lazy(() => import('./components/modals/AddGameModal').then(
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(m => ({ default: m.SettingsModal })));
 const EditThemeModal = lazy(() => import('./components/modals/EditThemeModal').then(m => ({ default: m.EditThemeModal })));
 const GameOverviewModal = lazy(() => import('./components/dashboard/GameOverviewModal').then(m => ({ default: m.GameOverviewModal })));
-const WhatToPlayModal = lazy(() => import('./components/modals/WhatToPlayModal').then(m => ({ default: m.WhatToPlayModal })));
+const RecommendationsHub = lazy(() => import('./components/RecommendationsHub').then(m => ({ default: m.RecommendationsHub })));
 
 function getRecentResumeGame(games: Game[]): Game | null {
   if (games.length === 0) return null;
@@ -215,7 +215,7 @@ export const App: React.FC = () => {
   const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isIntelDrawerOpen, setIsIntelDrawerOpen] = useState<boolean>(false);
-  const [isWhatToPlayOpen, setIsWhatToPlayOpen] = useState<boolean>(false);
+  const [isRecommendationsOpen, setIsRecommendationsOpen] = useState<boolean>(false);
   const [isJukeboxOpen, setIsJukeboxOpen] = useState<boolean>(false);
   const [saveVaultGame, setSaveVaultGame] = useState<Game | null>(null);
   const [isActivityOpen, setIsActivityOpen] = useState<boolean>(false);
@@ -258,7 +258,7 @@ export const App: React.FC = () => {
     isAddModalOpen ||
     isSettingsModalOpen ||
     isThemeModalOpen ||
-    isWhatToPlayOpen ||
+    isRecommendationsOpen ||
     isJukeboxOpen ||
     saveVaultGame !== null ||
     isActivityOpen ||
@@ -286,7 +286,7 @@ export const App: React.FC = () => {
   const modalStateRef = useRef({
     gamePendingRemoval,
     isSetupWizardOpen,
-    isWhatToPlayOpen,
+    isRecommendationsOpen,
     isJukeboxOpen,
     saveVaultGame,
     modManagingGame,
@@ -306,7 +306,7 @@ export const App: React.FC = () => {
     modalStateRef.current = {
       gamePendingRemoval,
       isSetupWizardOpen,
-      isWhatToPlayOpen,
+      isRecommendationsOpen,
       isJukeboxOpen,
       saveVaultGame,
       modManagingGame,
@@ -337,8 +337,8 @@ export const App: React.FC = () => {
       return true;
     }
     // Layer 4: Interactive Overlays
-    if (s.isWhatToPlayOpen) {
-      setIsWhatToPlayOpen(false);
+    if (s.isRecommendationsOpen) {
+      setIsRecommendationsOpen(false);
       return true;
     }
     if (s.isJukeboxOpen) {
@@ -950,7 +950,7 @@ export const App: React.FC = () => {
       } else if (action === 'NOTES') {
         audioEngine.playSelect();
         hapticsService.trigger('light-tick');
-        setIsWhatToPlayOpen((prev) => !prev);
+        setIsRecommendationsOpen((prev) => !prev);
       } else if (action === 'FAVORITE') {
         hapticsService.trigger('confirm');
         const target = curGames[curIndex];
@@ -1069,11 +1069,11 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Quick Suggest / What to Play (R key)
+      // Discover & AI Recommendations (R key)
       if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         audioEngine.playSelect();
-        setIsWhatToPlayOpen(true);
+        setIsRecommendationsOpen(true);
         return;
       }
 
@@ -1206,7 +1206,7 @@ export const App: React.FC = () => {
         }
         onOpenSearch={() => setIsCommandPaletteOpen(true)}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onOpenWhatToPlay={() => setIsWhatToPlayOpen(true)}
+        onOpenRecommendations={() => setIsRecommendationsOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenNotes={() => setIsNotesOpen(true)}
         onOpenJukebox={() => setIsJukeboxOpen(true)}
@@ -1311,7 +1311,7 @@ export const App: React.FC = () => {
           }}
           onOpenDetails={() => setIsIntelDrawerOpen((prev) => !prev)}
           onOpenNotes={() => setIsNotesOpen(true)}
-          onOpenWhatToPlay={() => setIsWhatToPlayOpen(true)}
+          onOpenRecommendations={() => setIsRecommendationsOpen(true)}
           onToggleViewMode={() =>
             setSettings((prev) => ({
               ...prev,
@@ -1459,26 +1459,6 @@ export const App: React.FC = () => {
           onLaunchGame={handleLaunchGame}
         />
 
-        {/* Astra Game Concierge & Decision Engine (What to Play / Roulette) */}
-        <WhatToPlayModal
-          isOpen={isWhatToPlayOpen}
-          onClose={() => setIsWhatToPlayOpen(false)}
-          games={games}
-          onLaunchGame={handleLaunchGame}
-          onOpenOverview={(g) => {
-            const idx = games.findIndex((x) => x.id === g.id);
-            if (idx !== -1) setSelectedGameIndex(idx);
-            setOverviewGame(g);
-            setIsWhatToPlayOpen(false);
-          }}
-          onOpenIntel={(g) => {
-            const idx = games.findIndex((x) => x.id === g.id);
-            if (idx !== -1) setSelectedGameIndex(idx);
-            setIsIntelDrawerOpen(true);
-            setIsWhatToPlayOpen(false);
-          }}
-        />
-
         <AddGameModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
@@ -1584,6 +1564,15 @@ export const App: React.FC = () => {
           onOpenJukebox={() => setIsJukeboxOpen(true)}
           onShowToast={showToast}
         />
+
+        {/* AI Recommendations Hub */}
+        <RecommendationsHub
+          isOpen={isRecommendationsOpen}
+          onClose={() => setIsRecommendationsOpen(false)}
+          games={games}
+          onLaunchGame={handleLaunchGame}
+          onShowToast={showToast}
+        />
       </Suspense>
 
       {/* Synchronous Modals & Drawers */}
@@ -1602,7 +1591,7 @@ export const App: React.FC = () => {
         games={games}
         onLaunchGame={handleLaunchGame}
         onSelectGame={(idx) => setSelectedGameIndex(idx)}
-        onOpenWhatToPlay={() => setIsWhatToPlayOpen(true)}
+        onOpenRecommendations={() => setIsRecommendationsOpen(true)}
       />
 
       <ConfirmRemoveModal

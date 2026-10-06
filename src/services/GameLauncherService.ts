@@ -113,6 +113,29 @@ class GameLauncherServiceClass {
   public hasRunningGames(): boolean {
     return this.activeGameSessions.size > 0;
   }
+
+  /**
+   * Extract standardized game metadata for recommendation and analysis
+   */
+  public getGameMetadata(game: Game): {
+    title: string;
+    platform: string;
+    genres: string[];
+    playtimeMinutes: number;
+    rating?: number;
+    isUnplayed: boolean;
+  } {
+    const playtime = game.stats?.playtimeMinutes || 0;
+    const rating = game.metadata?.rating || (game.metadata?.metacritic ? game.metadata.metacritic / 10 : undefined);
+    return {
+      title: game.title,
+      platform: game.type || 'standalone',
+      genres: game.genres || [],
+      playtimeMinutes: playtime,
+      rating,
+      isUnplayed: playtime === 0
+    };
+  }
 }
 
 export const GameLauncherService = new GameLauncherServiceClass();
