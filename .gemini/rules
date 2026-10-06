@@ -24,7 +24,7 @@ After generating, modifying, or fixing code:
 - **Type:** Electron + React 19 Game Launcher
 - **Frontend:** React, TypeScript, Vite
 - **Backend:** Electron IPC, Node.js
-- **Main Repo:** https://github.com/hoseinnp/astra-game-launcher
+- **Main Repo:** https://github.com/[USERNAME]/astra-game-launcher
 - **Reviewer:** Claude (via GitHub MCP integration)
 
 ## When Reviewer Asks for Changes

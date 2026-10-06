@@ -5,9 +5,9 @@ import { QuotesService } from './quotesService';
 
 export const DEFAULT_PROFILES: UserProfile[] = [
   {
-    id: 'user-aleron',
-    name: 'Aleron',
-    tag: 'Host & Creator',
+    id: 'user-default',
+    name: 'User',
+    tag: 'Player 1',
     avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop',
     theme: '8bitdo-mint',
     isHost: true

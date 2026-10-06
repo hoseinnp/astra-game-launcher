@@ -54,7 +54,7 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/hoseinnp/astra-game-launcher.git
+git clone https://github.com/[USERNAME]/astra-game-launcher.git
 cd astra-game-launcher
 
 # Install dependencies

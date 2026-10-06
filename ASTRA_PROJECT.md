@@ -2,7 +2,7 @@
 
 **Version:** 3.0.0  
 **Status:** Current Release  
-**GitHub:** https://github.com/hoseinnp/astra-game-launcher
+**GitHub:** https://github.com/[USERNAME]/astra-game-launcher
 
 ## Core Features
 - 3D Physical Shelf & Cartridge Inspector
