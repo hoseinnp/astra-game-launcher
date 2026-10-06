@@ -36,7 +36,7 @@ const JukeboxModal = lazy(() => import('./components/jukebox/JukeboxModal').then
 const SaveVaultModal = lazy(() => import('./components/modals/SaveVaultModal').then(m => ({ default: m.SaveVaultModal })));
 const ActivityDashboardModal = lazy(() => import('./modals/ActivityDashboardModal').then(m => ({ default: m.ActivityDashboardModal })));
 const SmartResumePopup = lazy(() => import('./components/SmartResumePopup').then(m => ({ default: m.SmartResumePopup })));
-const RetroHubModal = lazy(() => import('./components/modals/RetroHubModal').then(m => ({ default: m.RetroHubModal })));
+const RetroHub = lazy(() => import('./components/RetroHub').then(m => ({ default: m.RetroHub })));
 const InGameMiniHud = lazy(() => import('./components/hud/InGameMiniHud').then(m => ({ default: m.InGameMiniHud })));
 const SetupWizardModal = lazy(() => import('./components/onboarding/SetupWizardModal').then(m => ({ default: m.SetupWizardModal })));
 const AddGameModal = lazy(() => import('./components/modals/AddGameModal').then(m => ({ default: m.AddGameModal })));
@@ -1568,10 +1568,9 @@ export const App: React.FC = () => {
         )}
 
         {/* V3 Pillar 4: Retro & Emulation Hub */}
-        <RetroHubModal
+        <RetroHub
           isOpen={isRetroHubOpen}
           onClose={() => setIsRetroHubOpen(false)}
-          onAddGame={handleAddGame}
           onShowToast={showToast}
         />
 

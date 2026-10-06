@@ -95,8 +95,19 @@ contextBridge.exposeInMainWorld('api', {
   recordActivitySession: (session) => ipcRenderer.invoke('activity:record-session', session),
 
   // Retro Emulation Hub APIs
-  detectEmulators: () => ipcRenderer.invoke('emulator:detect-installed'),
-  scanRoms: (folderPath) => ipcRenderer.invoke('emulator:scan-roms', folderPath),
+  detectEmulators: () => ipcRenderer.invoke('retro:detect-emulators'),
+  scanRoms: (folderPaths) => ipcRenderer.invoke('retro:scan-roms', folderPaths),
+  launchRetroGame: (params) => ipcRenderer.invoke('retro:launch-game', params),
+  listSaveStates: (romPath) => ipcRenderer.invoke('retro:list-save-states', romPath),
+  backupSaveState: (params) => ipcRenderer.invoke('retro:backup-save-state', params),
+  restoreSaveState: (params) => ipcRenderer.invoke('retro:restore-save-state', params),
+  pickRetroFolder: () => ipcRenderer.invoke('retro:pick-folder'),
+  pickEmulatorExe: () => ipcRenderer.invoke('retro:pick-emulator-exe'),
+  onRetroScanProgress: (callback) => {
+    const handler = (_event, progress) => callback(progress);
+    ipcRenderer.on('retro:scan-progress', handler);
+    return () => ipcRenderer.removeListener('retro:scan-progress', handler);
+  },
 
   // System Performance APIs
   getSystemPerformance: () => ipcRenderer.invoke('system:get-performance')

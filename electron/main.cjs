@@ -5,6 +5,7 @@ const os = require('os');
 const { spawn, execFile, spawnSync } = require('child_process');
 const net = require('net');
 const { registerSaveVaultIpc } = require('./ipc/SaveVaultIpc.cjs');
+const { registerRetroIpc } = require('./ipc/RetroIpc.cjs');
 
 let mainWindow = null;
 const runningGames = new Map();
@@ -198,6 +199,9 @@ app.whenReady().then(() => {
   } catch (err) {
     console.warn('[Astra] Failed to register F12 global shortcut:', err.message);
   }
+
+  // Register Retro Hub IPC
+  registerRetroIpc(ipcMain, app, mainWindow, runningGames);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
