@@ -38,6 +38,7 @@ const ActivityDashboardModal = lazy(() => import('./modals/ActivityDashboardModa
 const SmartResumePopup = lazy(() => import('./components/SmartResumePopup').then(m => ({ default: m.SmartResumePopup })));
 const RetroHubModal = lazy(() => import('./components/modals/RetroHubModal').then(m => ({ default: m.RetroHubModal })));
 const InGameMiniHud = lazy(() => import('./components/hud/InGameMiniHud').then(m => ({ default: m.InGameMiniHud })));
+const MiniHUD = lazy(() => import('./components/MiniHUD').then(m => ({ default: m.MiniHUD })));
 const SetupWizardModal = lazy(() => import('./components/onboarding/SetupWizardModal').then(m => ({ default: m.SetupWizardModal })));
 const AddGameModal = lazy(() => import('./components/modals/AddGameModal').then(m => ({ default: m.AddGameModal })));
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(m => ({ default: m.SettingsModal })));
@@ -1584,6 +1585,7 @@ export const App: React.FC = () => {
           onOpenJukebox={() => setIsJukeboxOpen(true)}
           onShowToast={showToast}
         />
+        <MiniHUD />
       </Suspense>
 
       {/* Synchronous Modals & Drawers */}

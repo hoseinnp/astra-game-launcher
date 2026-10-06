@@ -14,10 +14,25 @@ function fallbackRender({ error }: { error: any }) {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary fallbackRender={fallbackRender}>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
-)
+const isHudMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'hud';
+
+if (isHudMode) {
+  const { MiniHUD } = await import('./components/MiniHUD');
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary fallbackRender={fallbackRender}>
+        <div style={{ width: '100vw', height: '100vh', background: 'transparent', overflow: 'hidden' }}>
+          <MiniHUD />
+        </div>
+      </ErrorBoundary>
+    </StrictMode>
+  );
+} else {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary fallbackRender={fallbackRender}>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>
+  );
+}
