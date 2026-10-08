@@ -4,6 +4,7 @@ import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { ThemeEngine } from '../../services/themeEngine';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
+import { GameCover } from '../GameCover';
 
 export type GridDensity = 'poster' | 'banner' | 'compact';
 
@@ -361,7 +362,7 @@ export const GridView: React.FC<GridViewProps> = ({
       </div>
 
       {/* Main Grid Area */}
-      <div className="flex-1 overflow-y-auto py-6 pr-2 z-10">
+      <div className="flex-1 overflow-y-auto py-6 px-8 z-10">
         {filteredGames.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-white/50 text-xs">
             <p className="font-semibold text-white/70 text-sm">No games found</p>
@@ -393,9 +394,10 @@ export const GridView: React.FC<GridViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <img
+                    <GameCover
                       src={normalizeMediaUrl(game.coverUrl)}
-                      alt={game.title}
+                      title={game.title}
+                      accent={game.theme?.accentColor}
                       className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="min-w-0">
@@ -515,9 +517,10 @@ export const GridView: React.FC<GridViewProps> = ({
                   >
                     {/* Image Area */}
                     <div className={`relative w-full overflow-hidden ${density === 'banner' ? 'aspect-video' : 'aspect-[3/4]'}`}>
-                      <img
+                      <GameCover
                         src={normalizeMediaUrl(cardImage)}
-                        alt={game.title}
+                        title={game.title}
+                        accent={game.theme?.accentColor}
                         className="w-full h-full object-cover object-top group-hover:scale-103 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
                       />
 

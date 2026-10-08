@@ -6,6 +6,7 @@ import {
 import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { hapticsService } from '../../services/hapticsService';
+import { GameCover } from '../GameCover';
 
 interface PhysicalShelfViewProps {
   games: Game[];
@@ -453,9 +454,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
           {/* Front Cartridge Label Art with Gloss Finish */}
           <div className="p-2 h-[142px]">
             <div className="relative w-full h-full rounded-md overflow-hidden border border-white/20 shadow-inner bg-black">
-              <img
+              <GameCover
                 src={game.coverUrl}
-                alt={game.title}
+                title={game.title}
+                accent={game.theme?.accentColor}
                 className="w-full h-full object-cover select-none filter contrast-110"
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent pointer-events-none" />
@@ -507,9 +509,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             <Disc className={`w-2.5 h-2.5 text-white ${isHovered ? 'animate-spin' : ''}`} />
           </div>
           {/* Cover Art */}
-          <img
+          <GameCover
             src={game.coverUrl}
-            alt={game.title}
+            title={game.title}
+            accent={game.theme?.accentColor}
             className="w-full h-full object-cover pl-3 pt-5 select-none"
           />
           {/* Acrylic Glass Specular Reflection */}
@@ -536,9 +539,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             </span>
             <span className="text-[8px] font-bold text-emerald-400 font-mono">CLASSIC</span>
           </div>
-          <img
+          <GameCover
             src={game.coverUrl}
-            alt={game.title}
+            title={game.title}
+            accent={game.theme?.accentColor}
             className="w-full h-full object-cover pt-5 select-none"
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent pointer-events-none opacity-40" />
@@ -568,9 +572,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             {game.type === 'steam' ? 'STEAM' : 'DISC'}
           </span>
         </div>
-        <img
+        <GameCover
           src={game.coverUrl}
-          alt={game.title}
+          title={game.title}
+          accent={game.theme?.accentColor}
           className="w-full h-full object-cover pt-5 select-none"
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent pointer-events-none opacity-40 group-hover:opacity-80 transition-opacity" />
@@ -692,7 +697,7 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
           tiers.map((tier, tierIdx) => (
             <div key={tierIdx} className="relative pt-6 pb-2">
               {/* 3D Game Boxes / Cartridges on Shelf */}
-              <div className="flex items-end justify-start gap-8 px-6 overflow-x-auto no-scrollbar [perspective:1400px]">
+              <div className="flex items-end justify-start gap-8 px-8 pt-8 pb-2 overflow-x-auto no-scrollbar [perspective:1400px]">
               {tier.map((game) => {
                 const isSelected = games[selectedGameIndex]?.id === game.id;
                 const isHovered = hoveredGameId === game.id;
@@ -1014,9 +1019,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                       {/* Front Label Recess with High-Gloss Art Sticker */}
                       <div className="p-4 h-[255px] relative">
                         <div className="relative w-full h-full rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black">
-                          <img
+                          <GameCover
                             src={inspectingGame.coverUrl}
-                            alt={inspectingGame.title}
+                            title={inspectingGame.title}
+                            accent={inspectingGame.theme?.accentColor}
                             className="w-full h-full object-cover select-none filter contrast-110"
                           />
                           {/* Gloss Sheen Reflection */}
@@ -1170,9 +1176,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                       </div>
 
                       {/* Front Cover Art */}
-                      <img
+                      <GameCover
                         src={inspectingGame.coverUrl}
-                        alt={inspectingGame.title}
+                        title={inspectingGame.title}
+                        accent={inspectingGame.theme?.accentColor}
                         className="w-full h-full object-cover pt-8 select-none"
                       />
 
@@ -1241,9 +1248,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                             transform: 'translateZ(2px)'
                           }}
                         >
-                          <img
+                          <GameCover
                             src={inspectingGame.coverUrl}
-                            alt="3D Disc Art"
+                            title={inspectingGame.title}
+                            accent={inspectingGame.theme?.accentColor}
                             className="w-full h-full object-cover select-none filter contrast-125 brightness-95"
                           />
 
@@ -1436,9 +1444,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                           >
                             {/* Disc Artwork Overlay */}
                             <div className="absolute inset-1 rounded-full overflow-hidden opacity-90">
-                              <img
+                              <GameCover
                                 src={inspectingGame.coverUrl}
-                                alt="Disc Art"
+                                title={inspectingGame.title}
+                                accent={inspectingGame.theme?.accentColor}
                                 className="w-full h-full object-cover select-none filter contrast-125"
                               />
                             </div>

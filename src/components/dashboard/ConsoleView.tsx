@@ -6,6 +6,7 @@ import { ThemeEngine } from '../../services/themeEngine';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import { AtmosphericOverlay } from './AtmosphericOverlay';
 import { ProceduralTitleLogo } from './ProceduralTitleLogo';
+import { GameCover } from '../GameCover';
 
 interface ConsoleViewProps {
   games: Game[];
@@ -605,9 +606,10 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
                           : `${itemVibe.cardShape} border-2 border-white/15 hover:border-white/40 shadow-md`
                       }`}
                     >
-                      <img
+                      <GameCover
                         src={normalizeMediaUrl(game.coverUrl)}
-                        alt={game.title}
+                        title={game.title}
+                        accent={game.theme?.accentColor}
                         className={`w-full h-full object-cover object-top transition-all duration-600 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                           isSelected ? 'scale-100 brightness-105 contrast-105' : 'filter brightness-90 contrast-95'
                         }`}
@@ -670,7 +672,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       </div>
 
       {/* BOTTOM SECTION: PS5 Hero Bar */}
-      <div key={activeGame.id} className="pb-10 px-14 z-20 flex flex-col justify-end max-w-4xl space-y-3.5 animate-heroEnter transform-gpu">
+      <div key={activeGame.id} className="pb-10 px-14 z-20 flex flex-col justify-end max-w-5xl space-y-3.5 animate-heroEnter transform-gpu">
         {/* Badges / Genres */}
         <div className="flex items-center gap-2 flex-wrap">
           <span
