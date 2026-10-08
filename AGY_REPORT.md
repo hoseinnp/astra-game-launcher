@@ -1,24 +1,31 @@
-# Task H Final Report: Version Sync with Release (v1.0.0)
+# Task I Final Report: Repository Clean for Public Release
 
-## Problem & Root Cause
-The packaged application and project were displaying outdated or mismatched version strings (e.g., "ASTRA OS 3.0", "V3 MODULE", "V3 HUB", and `3.0.0` in package configurations) instead of a unified single source of truth aligned with the current v1.0.0 release.
+## 1. Deleted Paths
+- `.gemini/rules` (and `.gemini/` directory)
+- `.superpowers/sdd/2026-10-08-responsive-shell/progress.md` (and `.superpowers/` directory)
+- `docs/superpowers/plans/2026-10-08-responsive-shell.md` (and empty `docs/` directory)
+- `scripts/build_app.py` & `scripts/write_file_helper.py` (and empty `scripts/` directory)
 
-## Changes Applied
-- **Single Source of Truth**: Updated `package.json` and root `package-lock.json` version fields to `"1.0.0"`.
-- **Dynamic Vite Version Injection**: Configured Vite `define` to inject `__APP_VERSION__` from `package.json` into the renderer; added type declaration in `src/env.d.ts`.
-- **UI Components**:
-  - `TopBar.tsx`: Dynamic version tag `v{__APP_VERSION__}` in desktop branding and mobile drawer footer.
-  - `SettingsModal.tsx`: Added version indicator `v{__APP_VERSION__}` in the header and about footer rail.
-  - `MiniHUD.tsx`: Dynamic `v{__APP_VERSION__}` in the HUD header.
-  - `ModManagerModal.tsx` & `RetroHubModal.tsx`: Cleaned badges to `ARMORY MODULE` and `RETRO HUB`.
-- **Audio & State Backward Compatibility**: `AudioService.ts` migrated playlist storage to `astra_jukebox_playlist` with fallback to `astra_jukebox_playlist_v3`.
-- **Packaging & Config**: Verified `electron-builder.json` dynamic artifact naming `${productName}-${version}-portable.exe`. Preserved `appId` (`com.astra.launcher`) to protect user data.
-- **Documentation**: Updated `ASTRA_PROJECT.md`, `RELEASES.md`, `ROADMAP.md`, and code comments to v1.0.0.
+## 2. Kept Docs / Scripts & Rationale
+- Kept: `README.md`, `ASTRA_PROJECT.md`, `ROADMAP.md`, `RELEASES.md`.
+- Rationale: Core product documentation, release notes, and product backlog roadmap. No package scripts referenced `scripts/`, so unreferenced agent helper scripts were pruned.
 
-## Verification
+## 3. Docs & Comments Scrubbed
+- `README.md`, `ASTRA_PROJECT.md`, `ROADMAP.md`, `RELEASES.md`, `package.json`, and source code comments audited. No assistant mentions (Claude, Antigravity, agy, superpowers, gemini) remained.
+- `.gitignore`: Added entries for `.gemini/`, `.superpowers/`, `.agent/`, `.agents/`, `.claude/`, `.cursor/`, `.windsurf/`, `.antigravity/`, `.github/copilot*`, `GEMINI.md`, `CLAUDE.md`, `AGENTS.md`, `TASK_QUEUE.md`, `AGY_REPORT.md`, `test-*.mjs`, `scratch/`.
+
+## 4. Safety Scan Findings
+- No hardcoded API keys, secrets, or passwords found (settings fields use dynamic user inputs/IPC; HLTB session handshake uses ephemeral tokens).
+- No personal user paths (`C:\Users\...`) or personal emails found in tracked code.
+
+## 5. Verification Results & Remaining Grep Hits
 - `npx tsc -b`: 0 errors.
-- `npx vite build`: Clean build (0 errors).
-- `npx oxlint`: 0 warnings, 0 errors across 8 touched files.
-- **Headless Browser Verification**: Tested built renderer via Puppeteer. Confirmed `v1.0.0` rendered in TopBar and no stale `v3`/`V3`/`3.0`/`Astra 3` strings in DOM.
-- **Packaged Executable Verification**: Built via `npx electron-builder --dir`. Verified `Astra Game Launcher.exe` has `ProductVersion: 1.0.0.0` and `FileVersion: 1.0.0`.
-- **Branch & Merge**: Merged `fix/version-sync` into `main` with `--no-ff` and pushed both branches.
+- `npx vite build`: Clean production build.
+- `npx oxlint`: 0 errors.
+- Final grep results (excluding lockfile & `TASK_QUEUE.md`/`AGY_REPORT.md`):
+  - `.gitignore`: Ignore patterns for assistant tools.
+  - `src/services/oracleStrategyService.ts`: "Prioritize core utility skills..." — legit gaming RPG character perk tip.
+
+## 6. Merge Status
+- Merged `chore/public-cleanup` into `main` (`--no-ff`).
+- Merge commit on `main`: `31615836875053fbf29819817432ebe112f92eb8`. Both branches pushed to remote.
