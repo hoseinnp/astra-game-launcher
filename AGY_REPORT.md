@@ -1,31 +1,26 @@
-# Task F2: Close-Out Audit Report (Controller Support)
+# Task G Report: Fix Jukebox Audio Overlap & Stop Control
 
-**Model**: Gemini 3.8 Flash (Medium)
-**Merge Status**: MERGED into `main` (`5c3e8918c1cdeedd9908e5c0c3b19cda269b11da`, branch `feat/controller-support`)
+**Root Cause**:
+Two independent competing audio singletons existed (`AudioService` and `jukeboxEngine`). `JukeboxModal` played via `AudioService` while `TopBar` and `InGameMiniHud` queried `jukeboxEngine`, leaving background playback un-stoppable from the HUD and allowing a second audio stream to play on top. In addition, `selectTrack` in `JukeboxModal` called `selectTrackByIndex` (which auto-played) and then immediately called `play()` again, and audio elements/oscillators lacked full teardown on stop.
 
-## Requirement Status (a-i)
-- **a. GamepadService Polling**: DONE (`src/services/gamepadEngine.ts`) - Polls only when connected and window focused; zero overhead otherwise.
-- **b. Controller Mapping**: DONE (`src/services/gamepadEngine.ts`, `src/App.tsx`, `src/components/modals/SettingsModal.tsx`) - D-pad/stick, A/B/X/Y, LB/RB view/tabs, Start, Select.
-- **c. Spatial Navigation & Modal Trap**: DONE (`src/App.tsx`, dashboard views) - Global vector-distance focus; modal-trapped; B restores previous focus.
-- **d. Scroll-into-view**: DONE (`src/App.tsx`) - Smooth scroll, instant `auto` under `html.reduce-effects` or `prefers-reduced-motion`.
-- **e. Visual Focus Ring**: DONE (`src/index.css`, `src/App.tsx`) - `--accent`/`--accent-glow` ring only in controller mode; exits on mouse move or key press; respects reduce-effects.
-- **f. Hint Bar**: DONE (`src/components/layout/NavigationHud.tsx`) - Bottom-corner legend adapts Xbox vs PlayStation glyphs; hidden on mouse/keyboard.
-- **g. Connect/Disconnect Toast**: DONE (`src/App.tsx`) - Toast banner triggered immediately on connection/disconnection events.
-- **h. Settings & Vibration**: DONE (`src/types/game.ts`, `src/services/storeService.ts`, `src/components/modals/SettingsModal.tsx`) - Controller toggle, deadzone slider, vibration toggle with `vibrationActuator` pulse.
-- **i. Safety**: DONE (`src/App.tsx`, `src/services/gamepadEngine.ts`) - Ignored when text inputs/textareas focused or when launching/running games.
+**Key Changes**:
+- `src/services/AudioService.ts`: Hardened singleton managing exactly one playback instance. Robust `stop()` and `pause()` that disconnect/clear oscillators, pause `audioElement`, reset `currentTime = 0`, clear src, stop ambient layers, and clear timers. Added play session tracking to prevent race conditions and attached `beforeunload`/`unload` teardown.
+- `src/services/jukeboxEngine.ts`: Converted into a facade mapping directly to `AudioService` so all consumers control the identical singleton state.
+- `src/modals/JukeboxModal.tsx`: Fixed double-play on track selection (`playTrack`), added a dedicated Stop button, and resynced audio state on open.
+- `src/components/layout/TopBar.tsx`: Added persistent inline stop button on the TopBar Jukebox pill and in the mobile drawer when audio is playing.
+- `src/components/hud/InGameMiniHud.tsx`: Added dedicated stop button to the Jukebox tab.
+- `src/App.tsx`: Registered `beforeunload`/`unload` handler stopping ambient and Jukebox audio.
+- `src/types/Audio.types.ts`: Extended `Track` type for backward compatibility.
 
-## Verification Results
+**Merge Status**:
+- Merged `fix/jukebox-stop` into `main` (`--no-ff`). Main commit: `ea3432d3e6062ff69ed0aee28c280b17f6d9ac8a`. Both branches pushed.
+
+**Verification Results**:
 - `npx tsc -b`: PASS (0 errors)
-- `npx vite build`: PASS (built in 535ms, 0 errors)
-- `npx oxlint` (touched files): PASS (0 warnings, 0 errors across 6 touched files)
-- Headless browser smoke test (Puppeteer + mock Gamepad API): PASS (all 8 criteria verified green)
+- `npx vite build`: PASS (built cleanly in 1.14s)
+- `npx oxlint` (touched files): PASS (0 warnings, 0 errors across 7 files)
+- Headless browser test: PASS (Track switch tears down previous track; single active instance; pause and stop reset state; TopBar/HUD/modal controls synchronized; 0 leaked audio elements).
 
-## Files Added / Changed
-- `src/types/game.ts`, `src/services/storeService.ts`, `src/services/gamepadEngine.ts`
-- `src/components/modals/SettingsModal.tsx`, `src/components/layout/NavigationHud.tsx`, `src/App.tsx`, `src/index.css`
-- `src/components/dashboard/ConsoleView.tsx`, `src/components/dashboard/GridView.tsx`, `src/components/dashboard/PhysicalShelfView.tsx`
-
-## Behaviors NOT Verifiable Headlessly (For Owner Testing)
-- Physical haptic vibration feel on actual Xbox/DualSense rumble motors (`vibrationActuator.playEffect`).
-- Physical analog stick calibration and real hardware stick-drift deadzone behavior.
-- Physical USB/Bluetooth hotplug connect/disconnect OS events with authentic controller hardware.
+**Behaviors NOT Verifiable Headlessly**:
+- OS-level audio device output fidelity and DAC switching during active Web Audio playback.
+- Hardware controller button feel during live background audio playback.
