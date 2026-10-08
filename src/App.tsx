@@ -112,10 +112,15 @@ function navigateSpatialFocus(action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): boolean
   const active = document.activeElement as HTMLElement | null;
   const currentIndex = active && container.contains(active) ? focusables.indexOf(active) : -1;
 
+  const isReduceEffects =
+    document.documentElement.classList.contains('reduce-effects') ||
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const scrollBehavior: ScrollBehavior = isReduceEffects ? 'auto' : 'smooth';
+
   if (currentIndex === -1) {
     const target = action === 'UP' ? focusables[focusables.length - 1] : focusables[0];
     target.focus();
-    target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: scrollBehavior });
     audioEngine.playHover();
     hapticsService.trigger('light-tick');
     return true;
@@ -174,7 +179,7 @@ function navigateSpatialFocus(action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): boolean
   if (bestIndex >= 0 && bestIndex < focusables.length) {
     const target = focusables[bestIndex];
     target.focus();
-    target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: scrollBehavior });
     audioEngine.playHover();
     hapticsService.trigger('light-tick');
     return true;
@@ -257,6 +262,18 @@ export const App: React.FC = () => {
   const gamesRef = useRef(games);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+  const [isLaunchingGame, setIsLaunchingGame] = useState(false);
+  const isLaunchingGameRef = useRef(false);
+  useEffect(() => {
+    isLaunchingGameRef.current = isLaunchingGame;
+  }, [isLaunchingGame]);
+
+  const isSettingsModalOpenRef = useRef(isSettingsModalOpen);
+  useEffect(() => {
+    isSettingsModalOpenRef.current = isSettingsModalOpen;
+  }, [isSettingsModalOpen]);
+
   const isAnyModalOpenRef = useRef(false);
   const isAnyModalOpen =
     isCommandPaletteOpen ||
@@ -276,8 +293,25 @@ export const App: React.FC = () => {
     isIntelDrawerOpen ||
     isSetupWizardOpen;
 
+  const lastNonModalFocusRef = useRef<HTMLElement | null>(null);
+  const prevAnyModalOpenRef = useRef(false);
+
   useEffect(() => {
     isAnyModalOpenRef.current = isAnyModalOpen;
+
+    if (!prevAnyModalOpenRef.current && isAnyModalOpen) {
+      // Modal just opened, save the active element outside modal
+      const active = document.activeElement as HTMLElement | null;
+      if (active && document.body.contains(active)) {
+        lastNonModalFocusRef.current = active;
+      }
+    } else if (prevAnyModalOpenRef.current && !isAnyModalOpen) {
+      // Modal just closed, restore previous focus
+      if (lastNonModalFocusRef.current && typeof lastNonModalFocusRef.current.focus === 'function') {
+        lastNonModalFocusRef.current.focus();
+      }
+    }
+    prevAnyModalOpenRef.current = isAnyModalOpen;
   }, [isAnyModalOpen]);
 
   useEffect(() => {
@@ -744,42 +778,47 @@ export const App: React.FC = () => {
 
   // Game Launch Handler
   const handleLaunchGame = useCallback(async (game: Game) => {
-    audioEngine.stopThemeAmbient();
-    audioEngine.stopBgm();
-    audioEngine.playLaunch();
-    showToast(`Launching ${game.title}...`);
+    setIsLaunchingGame(true);
+    try {
+      audioEngine.stopThemeAmbient();
+      audioEngine.stopBgm();
+      audioEngine.playLaunch();
+      showToast(`Launching ${game.title}...`);
 
-    const updatedStats = {
-      ...game.stats,
-      playCount: game.stats.playCount + 1,
-      lastPlayed: new Date().toISOString()
-    };
-    const candidate = { ...game, stats: updatedStats };
-    const { updatedGame, newlyUnlocked } = AchievementEngine.evaluateMilestones(candidate, true);
+      const updatedStats = {
+        ...game.stats,
+        playCount: game.stats.playCount + 1,
+        lastPlayed: new Date().toISOString()
+      };
+      const candidate = { ...game, stats: updatedStats };
+      const { updatedGame, newlyUnlocked } = AchievementEngine.evaluateMilestones(candidate, true);
 
-    if (window.api?.launchGame) {
-      // Launch game with pre-launch auto-backup and volume ducking via GameLauncherService
-      const res = await GameLauncherService.launchGame(candidate, {
-        autoBackup: settings.autoSaveBackupOnLaunch !== false,
-        duckVolume: true
-      });
+      if (window.api?.launchGame) {
+        // Launch game with pre-launch auto-backup and volume ducking via GameLauncherService
+        const res = await GameLauncherService.launchGame(candidate, {
+          autoBackup: settings.autoSaveBackupOnLaunch !== false,
+          duckVolume: true
+        });
 
-      if (!res.success && res.error) {
-        showToast(`Launch failed: ${res.error}`);
-        return;
+        if (!res.success && res.error) {
+          showToast(`Launch failed: ${res.error}`);
+          return;
+        }
       }
-    }
 
-    // Launch succeeded (or running in browser mode)
-    if (newlyUnlocked.length > 0) {
-      newlyUnlocked.forEach((t) => showTrophyToast(t.title, t.description, t.type));
+      // Launch succeeded (or running in browser mode)
+      if (newlyUnlocked.length > 0) {
+        newlyUnlocked.forEach((t) => showTrophyToast(t.title, t.description, t.type));
+      }
+      
+      setOverviewGame((cur) => (cur && cur.id === updatedGame.id ? updatedGame : cur));
+      
+      setGames((prev) =>
+        prev.map((g) => (g.id === game.id ? updatedGame : g))
+      );
+    } finally {
+      setIsLaunchingGame(false);
     }
-    
-    setOverviewGame((cur) => (cur && cur.id === updatedGame.id ? updatedGame : cur));
-    
-    setGames((prev) =>
-      prev.map((g) => (g.id === game.id ? updatedGame : g))
-    );
   }, [showToast, showTrophyToast, settings.autoSaveBackupOnLaunch]);
 
   // Favorite Toggle
@@ -944,8 +983,10 @@ export const App: React.FC = () => {
       setControllerDetails(details);
       if (connected) {
         setActiveInputMode('controller');
+        showToast(`Controller Connected: ${name || 'Gamepad'}`);
       } else {
         setActiveInputMode('keyboard');
+        showToast('Controller Disconnected');
       }
     });
 
@@ -959,10 +1000,11 @@ export const App: React.FC = () => {
       const curIndex = selectedIndexRef.current;
 
       if (settingsRef.current.controllerSupport === false) return;
+      if (isLaunchingGameRef.current || GameLauncherService.hasRunningGames()) return;
 
       if (action === 'BACK') {
         const active = document.activeElement as HTMLElement | null;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as any).isContentEditable)) {
           active.blur();
           return;
         }
@@ -975,7 +1017,7 @@ export const App: React.FC = () => {
 
       if (action === 'UP' || action === 'DOWN' || action === 'LEFT' || action === 'RIGHT') {
         const active = document.activeElement as HTMLElement | null;
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as any).isContentEditable)) {
           return; // Allow native interaction or prevent jumping
         }
         navigateSpatialFocus(action);
@@ -983,6 +1025,9 @@ export const App: React.FC = () => {
       }
 
       if (action === 'CONFIRM') {
+        if (settingsRef.current.gamepadVibration) {
+          gamepadEngine.triggerVibration('light');
+        }
         hapticsService.trigger('confirm');
         confirmModalFocus();
         return;
@@ -1008,6 +1053,10 @@ export const App: React.FC = () => {
       } else if (action === 'BUMPER_LEFT' || action === 'BUMPER_RIGHT') {
         audioEngine.playSelect();
         hapticsService.trigger('light-tick');
+        if (isSettingsModalOpenRef.current) {
+          window.dispatchEvent(new CustomEvent('astra:bumper', { detail: action }));
+          return;
+        }
         setSettings((prev) => ({
           ...prev,
           viewMode: prev.viewMode === 'ps5' ? 'grid' : prev.viewMode === 'grid' ? 'shelf' : 'ps5'
@@ -1022,7 +1071,7 @@ export const App: React.FC = () => {
         setIsRecommendationsOpen(true);
       }
     });
-  }, [handleLaunchGame]);
+  }, [handleLaunchGame, showToast]);
 
   // Controller / Keyboard Input Transition HUD & Glow Effect
   useEffect(() => {
@@ -1209,8 +1258,7 @@ export const App: React.FC = () => {
       isAnyModalOpen,
       dismissTopModal,
       handleTakeScreenshot,
-      handleLaunchGame,
-      showToast
+      handleLaunchGame
     ]
   );
 
@@ -1218,11 +1266,21 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     const handlePointer = () => setActiveInputMode('keyboard');
     window.addEventListener('mousedown', handlePointer);
+    window.addEventListener('mousemove', handlePointer);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('mousedown', handlePointer);
+      window.removeEventListener('mousemove', handlePointer);
     };
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (activeInputMode === 'controller') {
+      document.documentElement.classList.add('controller-mode');
+    } else {
+      document.documentElement.classList.remove('controller-mode');
+    }
+  }, [activeInputMode]);
 
   const resumeGame = useMemo(() => getRecentResumeGame(games), [games]);
 
@@ -1232,7 +1290,9 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className="w-screen h-screen flex flex-col text-white overflow-hidden relative font-sans transition-colors duration-700"
+      className={`w-screen h-screen flex flex-col text-white overflow-hidden relative font-sans transition-colors duration-700 ${
+        activeInputMode === 'controller' ? 'controller-mode' : ''
+      }`}
       style={{
         background: `linear-gradient(135deg, var(--global-bg-start) 0%, var(--global-bg-end) 100%)`
       }}

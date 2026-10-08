@@ -48,7 +48,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showNavigationHud: false,
   hasCompletedOnboarding: false,
   experienceArchetype: 'digital',
-  hapticsEnabled: true,
+  hapticsEnabled: false,
+  controllerSupport: true,
+  gamepadDeadzone: 0.4,
+  gamepadVibration: false,
   reduceEffects: false,
   customAccent: undefined,
   glowIntensity: 70
