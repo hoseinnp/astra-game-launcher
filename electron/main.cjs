@@ -5,6 +5,8 @@ const os = require('os');
 const { spawn, execFile, spawnSync } = require('child_process');
 const net = require('net');
 const { registerSaveVaultIpc } = require('./ipc/SaveVaultIpc.cjs');
+const { registerMiniHUDIpc } = require('./ipc/MiniHUDIpc.cjs');
+const { showHUDWindow, hideHUDWindow, registerHUDGlobalShortcuts } = require('./windows/HUDWindow.cjs');
 
 let mainWindow = null;
 const runningGames = new Map();
@@ -198,6 +200,10 @@ app.whenReady().then(() => {
   } catch (err) {
     console.warn('[Astra] Failed to register F12 global shortcut:', err.message);
   }
+
+  // Register Mini-HUD IPC and global shortcuts
+  registerMiniHUDIpc(app, mainWindow, runningGames);
+  registerHUDGlobalShortcuts(app, mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -425,6 +425,16 @@ export interface ElectronAPI {
   scanRoms?: (folderPath: string) => Promise<RomScanItem[]>;
   // System Performance APIs
   getSystemPerformance?: () => Promise<SystemPerformanceStats>;
+  // In-Game Mini-HUD APIs
+  toggleHudWindow?: (explicitVisible?: boolean) => Promise<boolean>;
+  setHudPosition?: (position: 'TL' | 'TR' | 'BL' | 'BR') => Promise<boolean>;
+  setHudOpacity?: (opacity: number) => Promise<boolean>;
+  setHudAlwaysOnTop?: (alwaysOnTop: boolean) => Promise<boolean>;
+  updateHudStats?: (payload: any) => Promise<boolean>;
+  minimizeGameWindow?: (gameId?: string) => Promise<boolean>;
+  closeGameProcess?: (gameId?: string) => Promise<{ success: boolean; error?: string }>;
+  onHudVisibilityChange?: (callback: (visible: boolean) => void) => () => void;
+  onHudStatsUpdate?: (callback: (data: any) => void) => () => void;
 }
 
 declare global {

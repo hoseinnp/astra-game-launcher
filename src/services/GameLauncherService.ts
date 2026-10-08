@@ -2,6 +2,7 @@ import type { Game } from '../types/game';
 import { AudioService } from './AudioService';
 import { SaveVaultService } from './SaveVaultService';
 import { ActivityTrackingService } from './ActivityTrackingService';
+import { MiniHUDService } from './MiniHUDService';
 
 export interface LaunchGameOptions {
   autoBackup?: boolean;
@@ -35,6 +36,9 @@ class GameLauncherServiceClass {
       this.activeGameSessions.delete(gameId);
       // Auto-save session tracking on game close
       ActivityTrackingService.logClose(gameId, durationMinutes);
+
+      // Notify MiniHUD
+      MiniHUDService.setGameRunning(null);
 
       // When all active game sessions have closed, restore volume
       if (this.activeGameSessions.size === 0) {
@@ -76,6 +80,8 @@ class GameLauncherServiceClass {
         if (res.success) {
           this.activeGameSessions.add(game.id);
           this.setupSessionEndListener();
+          // Publish game status to MiniHUD
+          MiniHUDService.setGameRunning(game, Date.now());
           return res;
         } else {
           // Launch failed — immediately restore volume
@@ -94,6 +100,7 @@ class GameLauncherServiceClass {
 
     // Web preview fallback simulation
     this.activeGameSessions.add(game.id);
+    MiniHUDService.setGameRunning(game, Date.now());
     return { success: true, mode: 'web-simulation' };
   }
 
@@ -104,6 +111,7 @@ class GameLauncherServiceClass {
     if (gameId) {
       this.activeGameSessions.delete(gameId);
     }
+    MiniHUDService.setGameRunning(null);
     AudioService.restoreVolume();
   }
 
@@ -139,3 +147,4 @@ class GameLauncherServiceClass {
 }
 
 export const GameLauncherService = new GameLauncherServiceClass();
+

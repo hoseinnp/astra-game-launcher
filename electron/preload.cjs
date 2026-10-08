@@ -99,6 +99,25 @@ contextBridge.exposeInMainWorld('api', {
   scanRoms: (folderPath) => ipcRenderer.invoke('emulator:scan-roms', folderPath),
 
   // System Performance APIs
-  getSystemPerformance: () => ipcRenderer.invoke('system:get-performance')
+  getSystemPerformance: () => ipcRenderer.invoke('system:get-performance'),
+
+  // In-Game Mini-HUD APIs
+  toggleHudWindow: (explicitVisible) => ipcRenderer.invoke('hud:toggle', explicitVisible),
+  setHudPosition: (position) => ipcRenderer.invoke('hud:set-position', position),
+  setHudOpacity: (opacity) => ipcRenderer.invoke('hud:set-opacity', opacity),
+  setHudAlwaysOnTop: (alwaysOnTop) => ipcRenderer.invoke('hud:set-always-on-top', alwaysOnTop),
+  updateHudStats: (payload) => ipcRenderer.invoke('hud:update-stats', payload),
+  minimizeGameWindow: (gameId) => ipcRenderer.invoke('hud:minimize-game', gameId),
+  closeGameProcess: (gameId) => ipcRenderer.invoke('hud:close-game', gameId),
+  onHudVisibilityChange: (callback) => {
+    const handler = (_event, visible) => callback(visible);
+    ipcRenderer.on('hud:visibility-change', handler);
+    return () => ipcRenderer.removeListener('hud:visibility-change', handler);
+  },
+  onHudStatsUpdate: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('hud:stats-update', handler);
+    return () => ipcRenderer.removeListener('hud:stats-update', handler);
+  }
 });
 
