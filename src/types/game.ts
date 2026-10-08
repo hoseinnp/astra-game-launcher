@@ -178,6 +178,9 @@ export interface AppSettings {
   hasCompletedOnboarding?: boolean;
   experienceArchetype?: ExperienceArchetype;
   hapticsEnabled?: boolean;
+  controllerSupport?: boolean;
+  gamepadDeadzone?: number;
+  gamepadVibration?: boolean;
   reduceEffects?: boolean;
   customAccent?: string;
   glowIntensity?: number; // 0 - 100

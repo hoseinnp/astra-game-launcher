@@ -121,6 +121,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('appearance');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Switch category tabs on gamepad LB/RB bumpers
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleBumper = (e: Event) => {
+      const customEvent = e as CustomEvent<'BUMPER_LEFT' | 'BUMPER_RIGHT'>;
+      const order: SettingsCategory[] = ['appearance', 'system', 'audio', 'integrations', 'data'];
+      const currentIdx = order.indexOf(activeCategory);
+      if (currentIdx === -1) return;
+      audioEngine.playHover();
+      if (customEvent.detail === 'BUMPER_RIGHT') {
+        const next = order[(currentIdx + 1) % order.length];
+        setActiveCategory(next);
+      } else {
+        const prev = order[(currentIdx - 1 + order.length) % order.length];
+        setActiveCategory(prev);
+      }
+    };
+    window.addEventListener('astra:bumper', handleBumper);
+    return () => window.removeEventListener('astra:bumper', handleBumper);
+  }, [isOpen, activeCategory]);
+
   const [advancedOpen, setAdvancedOpen] = useState<Record<string, boolean>>({
     appearance: false,
     system: false,
@@ -965,26 +987,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       />
                     </div>
                     {settings.controllerSupport !== false && (
-                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4">
-                        <div className="w-1/2">
-                          <h4 className="text-[11px] font-bold text-white">Analog Stick Deadzone</h4>
-                          <p className="text-[9px] text-white/40 mt-0.5">Increase to prevent stick drift registering as input</p>
+                      <>
+                        <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4">
+                          <div className="w-1/2">
+                            <h4 className="text-[11px] font-bold text-white">Analog Stick Deadzone</h4>
+                            <p className="text-[9px] text-white/40 mt-0.5">Increase to prevent stick drift registering as input</p>
+                          </div>
+                          <div className="flex items-center gap-3 flex-1 justify-end">
+                            <span className="text-[10px] text-white/40 font-mono w-6 text-right">
+                              {Math.round((settings.gamepadDeadzone ?? 0.4) * 100)}%
+                            </span>
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="0.9"
+                              step="0.05"
+                              value={settings.gamepadDeadzone ?? 0.4}
+                              onChange={(e) => onUpdateSettings({ ...settings, gamepadDeadzone: parseFloat(e.target.value) })}
+                              className="w-32 accent-[var(--accent,#2ee5ba)]"
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-1 justify-end">
-                          <span className="text-[10px] text-white/40 font-mono w-6 text-right">
-                            {Math.round((settings.gamepadDeadzone ?? 0.4) * 100)}%
-                          </span>
-                          <input
-                            type="range"
-                            min="0.1"
-                            max="0.9"
-                            step="0.05"
-                            value={settings.gamepadDeadzone ?? 0.4}
-                            onChange={(e) => onUpdateSettings({ ...settings, gamepadDeadzone: parseFloat(e.target.value) })}
-                            className="w-32 accent-[var(--accent,#2ee5ba)]"
+
+                        <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4">
+                          <div>
+                            <h4 className="text-[11px] font-bold text-white">Vibration Feedback</h4>
+                            <p className="text-[9px] text-white/40 mt-0.5">Light rumble pulse on activate when supported by gamepad</p>
+                          </div>
+                          <ToggleSwitch
+                            checked={Boolean(settings.gamepadVibration)}
+                            onChange={(checked) => onUpdateSettings({ ...settings, gamepadVibration: checked })}
+                            label="Vibration Feedback"
                           />
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                   

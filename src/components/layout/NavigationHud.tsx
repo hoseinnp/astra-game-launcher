@@ -34,7 +34,7 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
   const isController = activeInputMode === 'controller';
 
   // Render platform specific button glyphs
-  const renderGlyph = (actionKey: 'CONFIRM' | 'DETAILS' | 'NOTES' | 'RECOMMEND' | 'BUMPERS' | 'VIEW_TOGGLE' | 'DENSITY' | 'SEARCH' | 'SETTINGS') => {
+  const renderGlyph = (actionKey: 'CONFIRM' | 'BACK' | 'DETAILS' | 'NOTES' | 'RECOMMEND' | 'BUMPERS' | 'VIEW_TOGGLE' | 'DENSITY' | 'SEARCH' | 'SETTINGS') => {
     if (!isController) {
       // Keyboard Keycaps
       switch (actionKey) {
@@ -42,6 +42,12 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
           return (
             <kbd className="px-1.5 py-0.5 min-w-[20px] text-center rounded bg-white/20 text-white font-mono font-bold text-[10px] border border-white/30 shadow-sm">
               ↵ Enter
+            </kbd>
+          );
+        case 'BACK':
+          return (
+            <kbd className="px-1.5 py-0.5 min-w-[20px] text-center rounded bg-white/20 text-white font-mono font-bold text-[10px] border border-white/30 shadow-sm">
+              Esc
             </kbd>
           );
         case 'DETAILS':
@@ -99,6 +105,12 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
               ✕
             </span>
           );
+        case 'BACK':
+          return (
+            <span className="w-5 h-5 rounded-full bg-[#d83b01] text-white flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(216,59,1,0.7)] border border-white/40">
+              ○
+            </span>
+          );
         case 'DETAILS':
           return (
             <span className="w-5 h-5 rounded-full bg-[#d6006e] text-white flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(214,0,110,0.7)] border border-white/40">
@@ -152,6 +164,12 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
           return (
             <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-[0_0_8px_rgba(225,29,72,0.6)] border border-white/40">
               A
+            </span>
+          );
+        case 'BACK':
+          return (
+            <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(245,158,11,0.6)] border border-white/40">
+              B
             </span>
           );
         case 'DETAILS':
@@ -208,6 +226,12 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
             A
           </span>
         );
+      case 'BACK':
+        return (
+          <span className="w-5 h-5 rounded-full bg-[#d83b01] text-white flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(216,59,1,0.7)] border border-white/40">
+            B
+          </span>
+        );
       case 'DETAILS':
         return (
           <span className="w-5 h-5 rounded-full bg-[#0078d7] text-white flex items-center justify-center font-black text-xs shadow-[0_0_8px_rgba(0,120,215,0.7)] border border-white/40">
@@ -253,6 +277,47 @@ export const NavigationHud: React.FC<NavigationHudProps> = ({
         );
     }
   };
+
+  // Controller Mode: Small bottom-corner legend that adapts glyphs to controller brand
+  if (isController) {
+    return (
+      <footer
+        role="region"
+        aria-label="Controller Navigation Legend"
+        className="fixed bottom-4 right-4 z-40 px-4 py-2 rounded-2xl glass-panel border border-white/15 shadow-[0_12px_32px_rgba(0,0,0,0.65)] backdrop-blur-xl flex items-center gap-3.5 text-xs select-none transition-all duration-300 pointer-events-auto animate-fadeIn"
+      >
+        {/* A Select */}
+        <div className="flex items-center gap-1.5 text-white/90">
+          {renderGlyph('CONFIRM')}
+          <span className="font-semibold tracking-wide text-[11px]">Select</span>
+        </div>
+
+        <span className="w-1 h-3 border-r border-white/15" />
+
+        {/* B Back */}
+        <div className="flex items-center gap-1.5 text-white/80">
+          {renderGlyph('BACK')}
+          <span className="font-medium tracking-wide text-[11px]">Back</span>
+        </div>
+
+        <span className="w-1 h-3 border-r border-white/15" />
+
+        {/* LB/RB Switch view */}
+        <div className="flex items-center gap-1.5 text-white/80">
+          {renderGlyph('BUMPERS')}
+          <span className="font-medium tracking-wide text-[11px]">Switch view</span>
+        </div>
+
+        <span className="w-1 h-3 border-r border-white/15" />
+
+        {/* Start Settings */}
+        <div className="flex items-center gap-1.5 text-white/80">
+          {renderGlyph('SETTINGS')}
+          <span className="font-medium tracking-wide text-[11px]">Settings</span>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer

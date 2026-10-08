@@ -197,16 +197,18 @@ class GamepadEngine {
   private activityListener: (() => void) | null = null;
   private animFrameId: number | null = null;
   private lastActionTime: number = 0;
-  private repeatDelay: number = 220; // ms debounce between stick/dpad moves
+  private lastAction: GamepadAction | null = null;
+  private deadzone: number = 0.4;
   private isConnected: boolean = false;
   private gamepadName: string = '';
   private controllerDetails: ControllerDetails | null = null;
   private onConnectionChange: ((connected: boolean, name: string, details: ControllerDetails | null) => void) | null = null;
 
   constructor() {
-    window.addEventListener('gamepadconnected', (e) => {
+    window.addEventListener('gamepadconnected', (e: any) => {
       this.isConnected = true;
-      const parsed = parseGamepadDetails(e.gamepad.id);
+      const rawId = e.gamepad?.id || (navigator.getGamepads ? navigator.getGamepads()[0]?.id : '') || 'Wireless Controller';
+      const parsed = parseGamepadDetails(rawId);
       this.controllerDetails = parsed;
       this.gamepadName = parsed.modelName;
       if (this.onConnectionChange) this.onConnectionChange(true, this.gamepadName, this.controllerDetails);
@@ -224,6 +226,28 @@ class GamepadEngine {
         this.stopLoop();
       }
     });
+  }
+
+  public updateConfig(config: { deadzone: number }) {
+    this.deadzone = config.deadzone;
+  }
+
+  public triggerVibration(type: 'light' | 'heavy' = 'light') {
+    if (!this.isConnected) return;
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = Array.from(gamepads).find((g) => g !== null);
+    if (gp && gp.vibrationActuator) {
+      try {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: type === 'heavy' ? 200 : 100,
+          weakMagnitude: type === 'light' ? 0.3 : 0.8,
+          strongMagnitude: type === 'light' ? 0.1 : 0.8
+        });
+      } catch {
+        // ignore
+      }
+    }
   }
 
   public getConnected(): boolean {
@@ -255,17 +279,29 @@ class GamepadEngine {
     this.activityListener = cb;
   }
 
+  public isPolling(): boolean {
+    return this.animFrameId !== null;
+  }
+
   public setListener(fn: (action: GamepadAction) => void) {
     this.listener = fn;
-    this.startLoop();
+    if (this.isConnected) {
+      this.startLoop();
+    }
   }
 
   private startLoop() {
-    if (this.animFrameId !== null) return;
+    if (this.animFrameId !== null || !this.isConnected) return;
 
     const loop = () => {
+      if (!this.isConnected) {
+        this.stopLoop();
+        return;
+      }
       this.poll();
-      this.animFrameId = requestAnimationFrame(loop);
+      if (this.animFrameId !== null) {
+        this.animFrameId = requestAnimationFrame(loop);
+      }
     };
     this.animFrameId = requestAnimationFrame(loop);
   }
@@ -279,12 +315,18 @@ class GamepadEngine {
 
   private poll() {
     if (!this.listener) return;
+    // Safety check: if document is not focused, don't poll to prevent background interference
+    if (!document.hasFocus()) return;
+
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     const gp = Array.from(gamepads).find((g) => g !== null);
-    if (!gp) return;
+    if (!gp) {
+      this.isConnected = false;
+      this.stopLoop();
+      return;
+    }
 
     const now = performance.now();
-    if (now - this.lastActionTime < this.repeatDelay) return;
 
     // Left stick / D-Pad navigation
     const stickX = gp.axes[0] || 0;
@@ -294,60 +336,55 @@ class GamepadEngine {
     const dpadLeft = gp.buttons[14]?.pressed;
     const dpadRight = gp.buttons[15]?.pressed;
 
-    if (stickX > 0.55 || dpadRight) {
-      this.trigger('RIGHT', now);
-      return;
+    let pendingAction: GamepadAction | null = null;
+    let isDirectional = false;
+
+    if (stickX > this.deadzone || dpadRight) {
+      pendingAction = 'RIGHT';
+      isDirectional = true;
+    } else if (stickX < -this.deadzone || dpadLeft) {
+      pendingAction = 'LEFT';
+      isDirectional = true;
+    } else if (stickY > this.deadzone || dpadDown) {
+      pendingAction = 'DOWN';
+      isDirectional = true;
+    } else if (stickY < -this.deadzone || dpadUp) {
+      pendingAction = 'UP';
+      isDirectional = true;
+    } else if (gp.buttons[0]?.pressed) { // A (South) - Confirm/Play
+      pendingAction = 'CONFIRM';
+    } else if (gp.buttons[1]?.pressed) { // B (East) - Back
+      pendingAction = 'BACK';
+    } else if (gp.buttons[2]?.pressed) { // X / Square (West)
+      pendingAction = 'DETAILS'; // mapped to context action
+    } else if (gp.buttons[3]?.pressed) { // Y / Triangle (North)
+      pendingAction = 'NOTES'; // mapped to search
+    } else if (gp.buttons[4]?.pressed) { // LB
+      pendingAction = 'BUMPER_LEFT';
+    } else if (gp.buttons[5]?.pressed) { // RB
+      pendingAction = 'BUMPER_RIGHT';
+    } else if (gp.buttons[8]?.pressed) { // Select / Back
+      pendingAction = 'SELECT';
+    } else if (gp.buttons[9]?.pressed) { // Start
+      pendingAction = 'START';
     }
-    if (stickX < -0.55 || dpadLeft) {
-      this.trigger('LEFT', now);
-      return;
-    }
-    if (stickY > 0.55 || dpadDown) {
-      this.trigger('DOWN', now);
-      return;
-    }
-    if (stickY < -0.55 || dpadUp) {
-      this.trigger('UP', now);
+
+    if (!pendingAction) {
+      // Released
+      this.lastAction = null;
       return;
     }
 
-    // Action Buttons
-    if (gp.buttons[0]?.pressed) { // A (South) - Confirm/Play
-      this.trigger('CONFIRM', now + 150);
-      return;
-    }
-    if (gp.buttons[1]?.pressed) { // B (East) - Back
-      this.trigger('BACK', now + 150);
-      return;
-    }
-    if (gp.buttons[2]?.pressed) { // X / Square (West) - Game Hub & Details
-      this.trigger('DETAILS', now + 200);
-      return;
-    }
-    if (gp.buttons[3]?.pressed) { // Y / Triangle (North) - Field Notes
-      this.trigger('NOTES', now + 200);
-      return;
+    // Determine repeat delay
+    const isSameAction = this.lastAction === pendingAction;
+    const repeatDelay = isDirectional ? (isSameAction ? 120 : 350) : 300;
+
+    if (now - this.lastActionTime < repeatDelay) {
+      return; // debouncing
     }
 
-    // Bumpers
-    if (gp.buttons[4]?.pressed) { // LB
-      this.trigger('BUMPER_LEFT', now + 150);
-      return;
-    }
-    if (gp.buttons[5]?.pressed) { // RB
-      this.trigger('BUMPER_RIGHT', now + 150);
-      return;
-    }
-
-    // Start / Select
-    if (gp.buttons[8]?.pressed) { // Select / Back -> Search
-      this.trigger('SELECT', now + 250);
-      return;
-    }
-    if (gp.buttons[9]?.pressed) { // Start -> Settings
-      this.trigger('START', now + 250);
-      return;
-    }
+    this.lastAction = pendingAction;
+    this.trigger(pendingAction, now);
   }
 
   private trigger(action: GamepadAction, now: number) {

@@ -576,9 +576,14 @@ body {
   transition: box-shadow 0.2s ease-out;
 }
 
+html.reduce-effects .controller-mode *:focus {
+  box-shadow: 0 0 0 2px var(--accent, #2ee5ba) !important;
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html.reduce-effects .controller-mode *:focus {
+  .controller-mode *:focus {
     box-shadow: 0 0 0 2px var(--accent, #2ee5ba) !important;
-    transition: none;
+    transition: none !important;
   }
 }
