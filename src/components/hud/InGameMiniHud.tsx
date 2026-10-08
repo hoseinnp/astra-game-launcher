@@ -133,9 +133,9 @@ export const InGameMiniHud: React.FC<InGameMiniHudProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-6 right-6 z-50 w-96 rounded-3xl bg-zinc-950/95 border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl flex flex-col overflow-hidden animate-slideLeft select-none isolate">
+    <div className="fixed top-3 sm:top-6 right-3 sm:right-6 z-50 w-96 max-w-[calc(100vw-1.5rem)] rounded-2xl sm:rounded-3xl bg-zinc-950/95 border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl flex flex-col overflow-hidden animate-slideLeft select-none isolate max-h-[calc(100vh-1.5rem)] min-w-0">
       {/* Top Header */}
-      <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between">
+      <div className="p-3.5 sm:p-4 bg-white/5 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[var(--game-accent,#2ee5ba)] text-black flex items-center justify-center font-black shadow-md">
             <Zap className="w-4 h-4 fill-black" />

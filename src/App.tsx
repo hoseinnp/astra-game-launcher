@@ -644,6 +644,27 @@ export const App: React.FC = () => {
     }
   }, [selectedGameIndex, games, settings.bgmEnabled, settings.globalTheme, settings.viewMode]);
 
+  // Reduced Effects: Toggle root class on <html> based on setting or OS prefers-reduced-motion
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const updateClass = () => {
+      const isReduced = Boolean(settings.reduceEffects || mediaQuery.matches);
+      if (isReduced) {
+        root.classList.add('reduce-effects');
+      } else {
+        root.classList.remove('reduce-effects');
+      }
+    };
+
+    updateClass();
+    mediaQuery.addEventListener?.('change', updateClass);
+    return () => {
+      mediaQuery.removeEventListener?.('change', updateClass);
+    };
+  }, [settings.reduceEffects]);
+
   // Listen to game session endings from Electron main process
   useEffect(() => {
     if (window.api?.onGameSessionEnded) {

@@ -546,20 +546,20 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-[#0c101b] border border-white/15 shadow-2xl overflow-hidden animate-modalIn transform-gpu will-change-transform"
+        className="w-full max-w-2xl max-w-[calc(100vw-1.5rem)] max-h-[92vh] max-h-[calc(100vh-1.5rem)] flex flex-col rounded-2xl sm:rounded-3xl bg-[#0c101b] border border-white/15 shadow-2xl overflow-hidden animate-modalIn transform-gpu will-change-transform min-w-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header & Tabs */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-white/10">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-8 h-8 rounded-lg bg-[var(--game-accent)] flex items-center justify-center text-black">
               <Plus className="w-5 h-5 font-bold" />
             </div>
-            <h2 className="text-lg font-bold text-white tracking-wide">Add Games to Library</h2>
+            <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">Add Games to Library</h2>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white p-1">
             <X className="w-5 h-5" />
@@ -567,7 +567,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex px-6 pt-3 gap-2 border-b border-white/5 bg-black/20 overflow-x-auto">
+        <div className="flex px-4 sm:px-6 pt-2.5 sm:pt-3 gap-2 border-b border-white/5 bg-black/20 overflow-x-auto no-scrollbar max-w-full flex-nowrap">
           <button
             onClick={() => {
               setTab('platforms');

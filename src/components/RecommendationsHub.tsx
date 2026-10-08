@@ -98,24 +98,24 @@ export const RecommendationsHub: React.FC<RecommendationsHubProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
-      <div className="relative w-full max-w-6xl h-[92vh] bg-[#070b13]/95 border border-white/15 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
+      <div className="relative w-full max-w-6xl max-w-[calc(100vw-1.5rem)] h-[92vh] max-h-[calc(100vh-1.5rem)] bg-[#070b13]/95 border border-white/15 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white min-w-0">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 bg-white/5">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 shrink-0 bg-white/5 flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
               <Compass className="w-5 h-5 text-cyan-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-wide">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
                   Games You Might Like
                 </h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
                   AI Discovery
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-neutral-400 truncate">
                 Personalized suggestions from your unplayed library ranked by genre match and relevance
               </p>
             </div>
@@ -130,7 +130,8 @@ export const RecommendationsHub: React.FC<RecommendationsHubProps> = ({
               title="Recalculate playstyle and recommendations"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh Recommendations</span>
+              <span className="hidden sm:inline">Refresh Recommendations</span>
+              <span className="sm:hidden">Refresh</span>
             </button>
 
             <button

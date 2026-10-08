@@ -226,17 +226,17 @@ export const ModManagerModal: React.FC<ModManagerModalProps> = ({
   if (!isOpen || !game) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
-      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl bg-[#0c101c] border border-white/15 shadow-2xl overflow-hidden animate-modalIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
+      <div className="relative w-full max-w-4xl max-w-[calc(100vw-1.5rem)] max-h-[92vh] max-h-[calc(100vh-1.5rem)] flex flex-col rounded-2xl sm:rounded-3xl bg-[#0c101c] border border-white/15 shadow-2xl overflow-hidden animate-modalIn min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 bg-white/5 flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--game-accent,#2ee5ba)]/15 border border-[var(--game-accent,#2ee5ba)]/40 flex items-center justify-center text-[var(--game-accent,#2ee5ba)] shadow-[0_0_15px_var(--game-glow)]">
+            <div className="w-10 h-10 rounded-xl bg-[var(--game-accent,#2ee5ba)]/15 border border-[var(--game-accent,#2ee5ba)]/40 flex items-center justify-center text-[var(--game-accent,#2ee5ba)] shadow-[0_0_15px_var(--game-glow)] flex-shrink-0">
               <Layers className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black tracking-wide text-white uppercase">
+                <h2 className="text-sm sm:text-base font-black tracking-wide text-white uppercase truncate">
                   Mod & Add-On Pack Manager
                 </h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--game-accent,#2ee5ba)]/20 text-[var(--game-accent,#2ee5ba)] font-mono font-bold">
@@ -249,7 +249,7 @@ export const ModManagerModal: React.FC<ModManagerModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Master Mods Enable / Disable Switch */}
             <button
               onClick={handleToggleMasterMods}
@@ -277,8 +277,8 @@ export const ModManagerModal: React.FC<ModManagerModalProps> = ({
         </div>
 
         {/* Tab Navigation & Toolbar */}
-        <div className="flex items-center justify-between px-6 py-2.5 bg-black/30 border-b border-white/10 flex-wrap gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 bg-black/30 border-b border-white/10 flex-wrap gap-2">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full flex-nowrap py-0.5">
             <button
               onClick={() => {
                 audioEngine.playSelect();

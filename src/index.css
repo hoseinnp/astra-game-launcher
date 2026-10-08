@@ -10,7 +10,44 @@
   --global-bg-start: #071612;
   --global-bg-end: #020705;
   color-scheme: dark;
+
+  /* Motion & Effects CSS Variables for Task A / Task B */
+  --motion-duration-fast: 200ms;
+  --motion-duration-normal: 350ms;
+  --motion-duration-slow: 700ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --effect-glow-opacity: 1;
+  --effect-blur-filter: blur(16px);
+  --effect-blur-subtle: blur(10px);
 }
+
+/* Reduced Effects & Preferences */
+html.reduce-effects,
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms !important;
+    --motion-duration-normal: 0ms !important;
+    --motion-duration-slow: 0ms !important;
+    --effect-glow-opacity: 0 !important;
+    --effect-blur-filter: none !important;
+    --effect-blur-subtle: none !important;
+    --game-glow: transparent !important;
+    --global-glow: transparent !important;
+  }
+
+  html.reduce-effects *,
+  html.reduce-effects *::before,
+  html.reduce-effects *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 
 body {
   margin: 0;

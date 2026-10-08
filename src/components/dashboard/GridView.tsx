@@ -186,7 +186,7 @@ export const GridView: React.FC<GridViewProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 w-full h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden px-8 py-4 select-none isolate pb-14"
+      className="relative flex-1 w-full h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden px-3 sm:px-6 md:px-8 py-3 sm:py-4 select-none isolate pb-14 min-w-0"
     >
       {/* Dynamic Ambient Background Wallpaper */}
       {games[selectedGameIndex] && (
@@ -202,9 +202,9 @@ export const GridView: React.FC<GridViewProps> = ({
       )}
 
       {/* Controls Bar: Filter Pills, Search & Density Switcher */}
-      <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10 flex-wrap z-10">
+      <div className="flex items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-white/10 flex-wrap z-10 w-full min-w-0">
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 max-w-full min-w-0 flex-nowrap sm:flex-wrap">
           <button
             onClick={() => {
               audioEngine.playHover();
@@ -298,7 +298,7 @@ export const GridView: React.FC<GridViewProps> = ({
         </div>
 
         {/* Right Tools: View Density Switcher, Sort & Search */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           {/* Density Switcher */}
           <div className="flex items-center glass-pill rounded-lg p-0.5 border border-white/15">
             <button
@@ -342,7 +342,7 @@ export const GridView: React.FC<GridViewProps> = ({
             placeholder="Search games..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 rounded-lg glass-pill border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] w-36 sm:w-48 transition-all"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg glass-pill border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] w-28 sm:w-44 transition-all"
           />
 
           {/* Sort selector */}
@@ -351,7 +351,7 @@ export const GridView: React.FC<GridViewProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'lastPlayed' | 'playtime' | 'title')}
-              className="bg-transparent border-none text-white/80 focus:outline-none cursor-pointer"
+              className="bg-transparent border-none text-white/80 focus:outline-none cursor-pointer text-xs"
             >
               <option value="lastPlayed" className="bg-[#0b0e14]">Last Played</option>
               <option value="playtime" className="bg-[#0b0e14]">Most Played</option>
@@ -362,7 +362,7 @@ export const GridView: React.FC<GridViewProps> = ({
       </div>
 
       {/* Main Grid Area */}
-      <div className="flex-1 overflow-y-auto py-6 px-8 z-10">
+      <div className="flex-1 overflow-y-auto py-4 sm:py-6 px-1 sm:px-4 md:px-8 z-10 min-w-0">
         {filteredGames.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-white/50 text-xs">
             <p className="font-semibold text-white/70 text-sm">No games found</p>
@@ -465,10 +465,10 @@ export const GridView: React.FC<GridViewProps> = ({
         ) : (
           /* POSTER OR BANNER GRID */
           <div
-            className={`grid gap-6 ${
+            className={`grid gap-4 sm:gap-6 ${
               density === 'banner'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
-                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]'
+                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]'
             }`}
           >
             {filteredGames.map((game) => {

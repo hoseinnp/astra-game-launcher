@@ -302,15 +302,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-3xl bg-[#0c101b] border border-white/15 shadow-2xl overflow-hidden flex flex-col animate-modalIn transform-gpu will-change-transform"
+        className="w-full max-w-xl max-w-[calc(100vw-1.5rem)] rounded-2xl sm:rounded-3xl bg-[#0c101b] border border-white/15 shadow-2xl overflow-hidden flex flex-col animate-modalIn transform-gpu will-change-transform max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[var(--game-accent)] text-black flex items-center justify-center font-bold">
               <Monitor className="w-4 h-4" />
@@ -357,7 +357,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span>Visual Theme</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               {(Object.keys(GLOBAL_THEMES) as GlobalTheme[]).map((key) => {
                 const item = GLOBAL_THEMES[key];
                 const isActive = settings.globalTheme === key;
@@ -595,6 +595,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </button>
             </div>
+
+            {/* Reduced Effects Switch */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-white">Reduce animations and glow</h4>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    Accessibility & Performance
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  Disables transitions, heavy backdrop blurs, and neon glows for maximum performance or low-spec hardware. Also triggered automatically when OS prefers-reduced-motion is active.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Reduce animations and glow"
+                onClick={() => {
+                  audioEngine.playSelect();
+                  onUpdateSettings({
+                    ...settings,
+                    reduceEffects: !settings.reduceEffects
+                  });
+                }}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  settings.reduceEffects ? 'bg-[var(--game-accent)]' : 'bg-white/20'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings.reduceEffects ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Live Video Wallpapers (Offline Backgrounds) */}
@@ -677,7 +712,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             {/* Built-in No-Key Providers */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between">

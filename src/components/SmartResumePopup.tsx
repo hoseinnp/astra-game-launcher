@@ -58,8 +58,8 @@ export const SmartResumePopup: React.FC<SmartResumePopupProps> = ({
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
-      <div className="w-[360px] rounded-3xl bg-zinc-950/95 border border-white/20 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col gap-4 relative isolate overflow-hidden">
+    <div className="fixed bottom-3 sm:bottom-6 right-3 sm:right-6 z-50 animate-slideUp max-w-[calc(100vw-1.5rem)]">
+      <div className="w-[360px] max-w-full rounded-2xl sm:rounded-3xl bg-zinc-950/95 border border-white/20 p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col gap-3.5 sm:gap-4 relative isolate overflow-hidden min-w-0">
         {/* Ambient background glow */}
         <div
           className="absolute -top-10 -right-10 w-44 h-44 rounded-full opacity-20 filter blur-2xl pointer-events-none"

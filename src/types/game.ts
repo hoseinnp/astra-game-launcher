@@ -178,6 +178,7 @@ export interface AppSettings {
   hasCompletedOnboarding?: boolean;
   experienceArchetype?: ExperienceArchetype;
   hapticsEnabled?: boolean;
+  reduceEffects?: boolean;
 }
 
 export interface FolderScanResult {

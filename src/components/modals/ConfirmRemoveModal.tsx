@@ -56,11 +56,11 @@ export const ConfirmRemoveModal: React.FC<ConfirmRemoveModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-fadeIn select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn select-none"
       onClick={handleCancel}
     >
       <div
-        className="w-full max-w-md rounded-3xl bg-[#0c101b] border overflow-hidden shadow-2xl flex flex-col transform-gpu will-change-transform animate-modalIn"
+        className="w-full max-w-md max-w-[calc(100vw-1.5rem)] rounded-2xl sm:rounded-3xl bg-[#0c101b] border overflow-hidden shadow-2xl flex flex-col transform-gpu will-change-transform animate-modalIn max-h-[92vh] min-w-0"
         style={{
           borderColor: accentColor,
           boxShadow: `0 0 50px ${glowColor}, 0 20px 60px rgba(0,0,0,0.9)`

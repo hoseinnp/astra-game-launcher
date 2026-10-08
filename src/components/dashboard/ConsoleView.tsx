@@ -468,9 +468,9 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       </div>
 
       {/* TOP SECTION: Console Horizontal Game Ribbon */}
-      <div className="pt-2 px-10 z-20">
+      <div className="pt-2 px-3 sm:px-6 md:px-10 z-20 w-full min-w-0">
         {/* Collection Filter Tabs */}
-        <div className="flex items-center gap-2 pt-2 pb-0 px-4 z-30 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 pb-0 px-1 sm:px-4 z-30 overflow-x-auto no-scrollbar max-w-full flex-nowrap sm:flex-wrap">
           {[
             { id: 'all', label: 'All Titles', count: games.length },
             { id: 'playing', label: 'Now Playing', count: games.filter((g) => g.collection === 'playing').length },
@@ -522,14 +522,14 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
         </div>
 
         {/* Horizontal Game Ribbon with Edge Controls */}
-        <div className="relative group/ribbon">
+        <div className="relative group/ribbon w-full min-w-0">
           {/* Left Navigation Chevron Button */}
           {displayedIndex > 0 && (
             <button
               type="button"
               onClick={scrollRibbonLeft}
               aria-label="Previous Game"
-              className={`absolute -left-4 top-1/2 -translate-y-1/2 z-40 p-2.5 rounded-full bg-black/75 hover:bg-black/95 border border-white/20 hover:border-white/50 text-white/80 hover:text-white shadow-[0_8px_24px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all cursor-pointer ${
+              className={`absolute left-0 sm:-left-4 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/75 hover:bg-black/95 border border-white/20 hover:border-white/50 text-white/80 hover:text-white shadow-[0_8px_24px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all cursor-pointer ${
                 showLeftScrollBtn ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
               }`}
             >
@@ -543,7 +543,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
               type="button"
               onClick={scrollRibbonRight}
               aria-label="Next Game"
-              className={`absolute -right-4 top-1/2 -translate-y-1/2 z-40 p-2.5 rounded-full bg-black/75 hover:bg-black/95 border border-white/20 hover:border-white/50 text-white/80 hover:text-white shadow-[0_8px_24px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all cursor-pointer ${
+              className={`absolute right-0 sm:-right-4 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/75 hover:bg-black/95 border border-white/20 hover:border-white/50 text-white/80 hover:text-white shadow-[0_8px_24px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all cursor-pointer ${
                 showRightScrollBtn ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
               }`}
             >
@@ -672,7 +672,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
       </div>
 
       {/* BOTTOM SECTION: PS5 Hero Bar */}
-      <div key={activeGame.id} className="pb-10 px-14 z-20 flex flex-col justify-end max-w-5xl space-y-3.5 animate-heroEnter transform-gpu">
+      <div key={activeGame.id} className="pb-6 sm:pb-10 px-4 sm:px-8 md:px-14 z-20 flex flex-col justify-end max-w-5xl space-y-3 sm:space-y-3.5 animate-heroEnter transform-gpu min-w-0">
         {/* Badges / Genres */}
         <div className="flex items-center gap-2 flex-wrap">
           <span

@@ -164,22 +164,22 @@ export const ActivityHeatmapModal: React.FC<ActivityHeatmapModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
-      <div className="w-full max-w-4xl max-h-[90vh] rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
+      <div className="w-full max-w-4xl max-w-[calc(100vw-1.5rem)] max-h-[92vh] max-h-[calc(100vh-1.5rem)] rounded-2xl sm:rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative min-w-0">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-lg flex-shrink-0">
               <BarChart2 className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white tracking-wider uppercase">Gaming Activity Heatmap</h2>
+                <h2 className="text-sm sm:text-base font-black text-white tracking-wider uppercase truncate">Gaming Activity Heatmap</h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
                   ANNUAL RADAR
                 </span>
               </div>
-              <p className="text-xs text-white/50">365-Day Session Matrix, Focus Streaks & Milestones</p>
+              <p className="text-xs text-white/50 truncate">365-Day Session Matrix, Focus Streaks & Milestones</p>
             </div>
           </div>
 

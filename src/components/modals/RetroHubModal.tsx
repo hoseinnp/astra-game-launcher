@@ -127,22 +127,22 @@ export const RetroHubModal: React.FC<RetroHubModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
-      <div className="w-full max-w-4xl max-h-[85vh] rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-xl animate-fadeIn select-none">
+      <div className="w-full max-w-4xl max-w-[calc(100vw-1.5rem)] max-h-[92vh] max-h-[calc(100vh-1.5rem)] rounded-2xl sm:rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative min-w-0">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shadow-lg font-black">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shadow-lg font-black flex-shrink-0">
               <Gamepad2 className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white tracking-wider uppercase">Retro & Emulation Hub</h2>
+                <h2 className="text-sm sm:text-base font-black text-white tracking-wider uppercase truncate">Retro & Emulation Hub</h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
                   V3 HUB
                 </span>
               </div>
-              <p className="text-xs text-white/50">ROM Directory Scanner, Standalone Emulators & Auto-Arguments</p>
+              <p className="text-xs text-white/50 truncate">ROM Directory Scanner, Standalone Emulators & Auto-Arguments</p>
             </div>
           </div>
 
@@ -150,10 +150,10 @@ export const RetroHubModal: React.FC<RetroHubModalProps> = ({
             <button
               onClick={handlePickAndScanFolder}
               disabled={isScanning}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 text-black font-extrabold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-amber-400 text-black font-extrabold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer flex-shrink-0"
             >
               <FolderSearch className="w-4 h-4" />
-              <span>{isScanning ? 'Scanning Directory...' : 'Scan ROM Folder'}</span>
+              <span>{isScanning ? 'Scanning...' : 'Scan ROM Folder'}</span>
             </button>
             <button
               onClick={() => {
@@ -168,8 +168,8 @@ export const RetroHubModal: React.FC<RetroHubModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="px-6 py-2.5 bg-black/40 border-b border-white/10 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
+        <div className="px-4 sm:px-6 py-2.5 bg-black/40 border-b border-white/10 flex items-center justify-between text-xs flex-wrap gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full flex-nowrap py-0.5">
             <button
               onClick={() => setActiveTab('roms')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
