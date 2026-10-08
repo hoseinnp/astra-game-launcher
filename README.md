@@ -9,6 +9,9 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 - **🎮 Dual Interface (Desktop & Console Big-Picture Modes)**  
   Switch seamlessly between a mouse-friendly desktop grid and a high-immersion controller-first Big-Picture console view with full gamepad navigation and haptic feedback.
 
+- **🎨 Themeable UI with Accent Glow & Reduced Effects**  
+  Customize the launcher with vibrant accent colors, dynamic background glow, and full support for reduced motion/effects (`prefers-reduced-motion`).
+
 - **🕹️ Comprehensive Library & Multi-Platform Auto-Detection**  
   Scan, import, and launch games from Steam, Epic Games, GOG, Ubisoft Connect, EA, and standalone installations.
 
@@ -18,8 +21,11 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 - **🎵 Astra Jukebox & Audio Visualizer**  
   Integrated OST and ambient sound player with real-time reactive audio visualizers matching game color palettes.
 
-- **📊 Playtime Analytics & Activity Heatmap**  
-  Deep session tracking, peak gaming hours analysis, and a GitHub-style annual contribution matrix.
+- **📊 Playtime Analytics, Activity Heatmap & Smart Resume**  
+  Deep session tracking, peak gaming hours analysis, a GitHub-style annual contribution matrix, and predictive AI suggestions for picking up where you left off.
+
+- **🤖 AI Recommendations Hub**  
+  Discover new titles from your library or get intelligent suggestions on what to play next based on your playtime patterns.
 
 - **⚔️ Astra Armory (Mod Manager)**  
   Integrated mod manager supporting script extenders, priority load ordering, conflict detection, and profile presets.
@@ -28,10 +34,7 @@ A modern, high-performance desktop game launcher and companion dashboard built w
   Integrated ROM scanner, BIOS checks, and 1-click execution for RetroArch, Dolphin, PCSX2, RPCS3, and DuckStation.
 
 - **⚡ In-Game Companion Mini-HUD**  
-  Lightweight transparent overlay (`Shift + Tab`) providing instant access to game notes, checklists, screenshots, and volume controls without alt-tabbing.
-
-- **🤖 Astra Game Oracle**  
-  Tactical in-launcher AI lore and strategy co-pilot for spoiler-free quest guidance, boss tips, and build suggestions.
+  Lightweight transparent overlay providing instant access to game notes, checklists, screenshots, and volume controls without alt-tabbing. Toggle it globally with the `Ctrl + \`` hotkey (or `Cmd + \`` on macOS).
 
 ---
 
@@ -45,30 +48,34 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 
 ---
 
-## 💾 Installation
+## 💾 Installation & Development
 
-### Option 1: Installer (Recommended)
-1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
-2. Download the latest `Astra Game Launcher-X.X.X.exe` (full installer)
-3. Run the installer and follow the prompts
-4. Astra will be installed to your Program Files
-5. A desktop shortcut will be created automatically
-
-### Option 2: Portable (No Installation)
-1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
-2. Download the latest `Astra Game Launcher-X.X.X-portable.exe`
-3. Run directly from anywhere (USB stick, Downloads, etc.)
-4. No installation required, no registry changes
-
-### Option 3: Build from Source
+### Local Development
 ```bash
 git clone https://github.com/[USERNAME]/astra-game-launcher.git
 cd astra-game-launcher
 npm install
-npm run dev          # Development
-npm run build        # Production build
-npm run dist:win     # Create installers
+
+# Start development server (Frontend + Electron)
+npm run dev
+
+# Production build of the frontend
+npm run build
+
+# Package an executable (Windows Portable)
+npm run dist:portable
 ```
+
+### Option 1: Installer
+1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
+2. Download the latest `Astra Game Launcher-X.X.X.exe`
+3. Run the installer to add Astra to your Program Files.
+
+### Option 2: Portable (No Installation)
+1. Download `Astra Game Launcher-X.X.X-portable.exe`
+2. Run directly from anywhere (USB stick, Downloads, etc.) without registry changes.
+
+---
 
 ## ⚙️ System Requirements
 - Windows 10 or later

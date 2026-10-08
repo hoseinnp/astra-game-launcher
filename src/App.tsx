@@ -25,6 +25,7 @@ import { jukeboxEngine } from './services/jukeboxEngine';
 import { GameLauncherService } from './services/GameLauncherService';
 import { hapticsService } from './services/hapticsService';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ActivityTrackingService } from './services/ActivityTrackingService';
 import { PatternDetectionService } from './services/PatternDetectionService';
 import type { PlayPattern } from './types/Activity.types';
@@ -1289,7 +1290,8 @@ export const App: React.FC = () => {
       {/* Main View Area: Console Ribbon, Grid Library, or 3D Physical Shelf */}
       <div key={settings.viewMode} className="flex-1 flex flex-col min-h-0 relative animate-view-fade">
         {settings.viewMode === 'ps5' ? (
-          <ConsoleView
+          <ErrorBoundary fallbackMessage="Console View encountered an error.">
+            <ConsoleView
             games={games}
             selectedGameIndex={selectedGameIndex}
             onSelectGame={(idx) => setSelectedGameIndex(idx)}
@@ -1306,8 +1308,10 @@ export const App: React.FC = () => {
             onRemoveGame={handleRemoveGame}
             backgroundBlur={settings.backgroundBlur}
           />
+          </ErrorBoundary>
         ) : settings.viewMode === 'grid' ? (
-          <GridView
+          <ErrorBoundary fallbackMessage="Grid View encountered an error.">
+            <GridView
             games={games}
             selectedGameIndex={selectedGameIndex}
             onSelectGame={(idx) => setSelectedGameIndex(idx)}
@@ -1323,6 +1327,7 @@ export const App: React.FC = () => {
             initialDensity={gridDensity}
             onDensityChange={setGridDensity}
           />
+          </ErrorBoundary>
         ) : (
           <Suspense fallback={
             <div className="flex-1 flex items-center justify-center min-h-[400px]">
@@ -1332,6 +1337,7 @@ export const App: React.FC = () => {
               </div>
             </div>
           }>
+            <ErrorBoundary fallbackMessage="Physical Shelf encountered an error.">
             <PhysicalShelfView
               games={games}
               selectedGameIndex={selectedGameIndex}
@@ -1344,6 +1350,7 @@ export const App: React.FC = () => {
               }}
               onOpenMods={(g) => setModManagingGame(g)}
             />
+          </ErrorBoundary>
           </Suspense>
         )}
       </div>
@@ -1379,7 +1386,8 @@ export const App: React.FC = () => {
       )}
 
       {/* Game Intel Quick-Deck Drawer */}
-      <GameIntelDrawer
+      <ErrorBoundary fallbackMessage="Game Intel encountered an error.">
+        <GameIntelDrawer
         isOpen={isIntelDrawerOpen}
         game={games[selectedGameIndex] || null}
         onClose={() => setIsIntelDrawerOpen(false)}
@@ -1398,6 +1406,7 @@ export const App: React.FC = () => {
         onUpdateGame={handleUpdateGame}
         onTakeScreenshot={handleTakeScreenshot}
       />
+      </ErrorBoundary>
 
       {/* Visual Camera Shutter Flash Animation */}
       {isShutterFlashing && (
@@ -1469,7 +1478,8 @@ export const App: React.FC = () => {
 
       {/* Lazy Modals & Drawers */}
       <Suspense fallback={null}>
-        <GameOverviewModal
+        <ErrorBoundary fallbackMessage="Game Overview encountered an error.">
+          <GameOverviewModal
           isOpen={overviewGame !== null}
           game={overviewGame}
           onClose={() => setOverviewGame(null)}
@@ -1499,17 +1509,21 @@ export const App: React.FC = () => {
           onTakeScreenshot={handleTakeScreenshot}
           apiKeys={settings.apiKeys}
         />
+        </ErrorBoundary>
 
         {/* V3 Mod & Add-On Pack Manager Modal */}
-        <ModManagerModal
+        <ErrorBoundary fallbackMessage="Mod Manager encountered an error.">
+          <ModManagerModal
           isOpen={modManagingGame !== null}
           game={modManagingGame}
           onClose={() => setModManagingGame(null)}
           onUpdateGame={handleUpdateGame}
           onLaunchGame={handleLaunchGame}
         />
+        </ErrorBoundary>
 
-        <AddGameModal
+        <ErrorBoundary fallbackMessage="Add Game encountered an error.">
+          <AddGameModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onAddGame={handleAddGame}
@@ -1517,8 +1531,10 @@ export const App: React.FC = () => {
           apiKeys={settings.apiKeys}
           existingGames={games}
         />
+        </ErrorBoundary>
 
-        <EditThemeModal
+        <ErrorBoundary fallbackMessage="Theme Editor encountered an error.">
+          <EditThemeModal
           key={isThemeModalOpen && themeEditingGame ? themeEditingGame.id : 'theme-modal-closed'}
           isOpen={isThemeModalOpen}
           onClose={() => {
@@ -1531,8 +1547,10 @@ export const App: React.FC = () => {
           onRemoveGame={handleRemoveGame}
           apiKeys={settings.apiKeys}
         />
+        </ErrorBoundary>
 
-        <SettingsModal
+        <ErrorBoundary fallbackMessage="Settings encountered an error.">
+          <SettingsModal
           isOpen={isSettingsModalOpen}
           onClose={() => setIsSettingsModalOpen(false)}
           settings={settings}
@@ -1550,9 +1568,11 @@ export const App: React.FC = () => {
             setIsSetupWizardOpen(true);
           }}
         />
+        </ErrorBoundary>
 
         {/* Setup Wizard Onboarding Modal */}
-        <SetupWizardModal
+        <ErrorBoundary fallbackMessage="Setup Wizard encountered an error.">
+          <SetupWizardModal
           isOpen={isSetupWizardOpen}
           currentSettings={settings}
           onComplete={(newSettings) => {
@@ -1562,50 +1582,62 @@ export const App: React.FC = () => {
           }}
           onClose={() => setIsSetupWizardOpen(false)}
         />
+        </ErrorBoundary>
 
         {/* V3 Pillar 1: Astra Jukebox & Audio Visualizer */}
-        <JukeboxModal
+        <ErrorBoundary fallbackMessage="Jukebox encountered an error.">
+          <JukeboxModal
           isOpen={isJukeboxOpen}
           onClose={() => setIsJukeboxOpen(false)}
           accentColor={games[selectedGameIndex]?.theme?.accentColor || '#2ee5ba'}
           onShowToast={showToast}
         />
+        </ErrorBoundary>
 
         {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
-        <SaveVaultModal
+        <ErrorBoundary fallbackMessage="Save Vault encountered an error.">
+          <SaveVaultModal
           isOpen={saveVaultGame !== null}
           game={saveVaultGame}
           onClose={() => setSaveVaultGame(null)}
           onShowToast={showToast}
         />
+        </ErrorBoundary>
 
         {/* V3 Pillar 3: Gaming Activity Tracking & Analytics Dashboard */}
-        <ActivityDashboardModal
+        <ErrorBoundary fallbackMessage="Activity Dashboard encountered an error.">
+          <ActivityDashboardModal
           isOpen={isActivityOpen}
           games={games}
           onClose={() => setIsActivityOpen(false)}
           accentColor={games[selectedGameIndex]?.theme?.accentColor || '#10b981'}
         />
+        </ErrorBoundary>
 
         {/* Smart Resume Popup Notification */}
         {resumePattern && (
-          <SmartResumePopup
+          <ErrorBoundary fallbackMessage="Smart Resume encountered an error.">
+            <SmartResumePopup
             pattern={resumePattern}
             games={games}
             onOpenStats={() => setIsActivityOpen(true)}
             onDismiss={() => setResumePattern(null)}
           />
+          </ErrorBoundary>
         )}
 
         {/* V3 Pillar 4: Retro & Emulation Hub */}
-        <RetroHub
+        <ErrorBoundary fallbackMessage="Retro Hub encountered an error.">
+          <RetroHub
           isOpen={isRetroHubOpen}
           onClose={() => setIsRetroHubOpen(false)}
           onShowToast={showToast}
         />
+        </ErrorBoundary>
 
         {/* V3 Pillar 5: In-Game Companion Mini-HUD */}
-        <InGameMiniHud
+        <ErrorBoundary fallbackMessage="Mini-HUD encountered an error.">
+          <InGameMiniHud
           isOpen={isMiniHudOpen}
           activeGame={games[selectedGameIndex] || null}
           onClose={() => setIsMiniHudOpen(false)}
@@ -1613,31 +1645,39 @@ export const App: React.FC = () => {
           onOpenJukebox={() => setIsJukeboxOpen(true)}
           onShowToast={showToast}
         />
+        </ErrorBoundary>
 
         {/* AI Recommendations Hub */}
-        <RecommendationsHub
+        <ErrorBoundary fallbackMessage="Recommendations encountered an error.">
+          <RecommendationsHub
           isOpen={isRecommendationsOpen}
           onClose={() => setIsRecommendationsOpen(false)}
           games={games}
           onLaunchGame={handleLaunchGame}
           onShowToast={showToast}
         />
+        </ErrorBoundary>
 
         {/* Global In-Game Overlay MiniHUD */}
-        <MiniHUD />
+        <ErrorBoundary fallbackMessage="Global Mini-HUD encountered an error.">
+          <MiniHUD />
+        </ErrorBoundary>
       </Suspense>
 
       {/* Synchronous Modals & Drawers */}
 
-      <NotesDrawer
+      <ErrorBoundary fallbackMessage="Notes Drawer encountered an error.">
+        <NotesDrawer
         key={isNotesOpen && games[selectedGameIndex] ? games[selectedGameIndex].id : 'notes-drawer-closed'}
         isOpen={isNotesOpen}
         onClose={() => setIsNotesOpen(false)}
         game={games[selectedGameIndex] || null}
         onUpdateGame={handleUpdateGame}
       />
+      </ErrorBoundary>
 
-      <CommandPalette
+      <ErrorBoundary fallbackMessage="Command Palette encountered an error.">
+        <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         games={games}
@@ -1645,8 +1685,10 @@ export const App: React.FC = () => {
         onSelectGame={(idx) => setSelectedGameIndex(idx)}
         onOpenRecommendations={() => setIsRecommendationsOpen(true)}
       />
+      </ErrorBoundary>
 
-      <ConfirmRemoveModal
+      <ErrorBoundary fallbackMessage="Confirmation encountered an error.">
+        <ConfirmRemoveModal
         isOpen={gamePendingRemoval !== null}
         game={gamePendingRemoval}
         onClose={() => setGamePendingRemoval(null)}
@@ -1655,6 +1697,7 @@ export const App: React.FC = () => {
           setGamePendingRemoval(null);
         }}
       />
+      </ErrorBoundary>
       <ImportProgressBar />
       <ToastStack />
     </div>
