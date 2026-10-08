@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate tag version against package.json
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          REF_NAME="${GITHUB_REF_NAME}"
+          TAG_VERSION="${REF_NAME#v}"
+          echo "Package version: $PACKAGE_VERSION"
+          echo "Tag version: $TAG_VERSION"
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
+      - name: Build frontend renderer
+        run: npm run build
+
+      - name: Package Windows portable application
+        run: npx electron-builder --win portable --publish never
+
+      - name: Extract release notes
+        id: extract_notes
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("fs");
+            let notes = "";
+            try {
+              if (fs.existsSync("RELEASES.md")) {
+                const content = fs.readFileSync("RELEASES.md", "utf8");
+                const version = require("./package.json").version;
+                const escaped = version.replace(/\./g, "\\.");
+                const regex = new RegExp("(?:^|\\n)##\\s+v?" + escaped + "(?:\\s*-[^\\n]*)?\\r?\\n([\\s\\S]*?)(?=(?:\\r?\\n##\\s+v?\\d|\\r?\\n```|$))");
+                const match = content.match(regex);
+                if (match && match[1].trim()) {
+                  notes = match[1].trim();
+                }
+              }
+            } catch (err) {
+              console.error("Error reading RELEASES.md:", err);
+            }
+
+            if (notes) {
+              fs.writeFileSync("RELEASE_NOTES_BODY.md", notes, "utf8");
+              console.log("Found release notes for version in RELEASES.md");
+              const delimiter = "EOF_" + Math.random().toString(36).substring(2);
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_notes=true\nbody<<${delimiter}\n${notes}\n${delimiter}\n`);
+            } else {
+              console.log("No specific release notes found in RELEASES.md; fallback to auto-generated notes");
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, "has_notes=false\n");
+            }
+          '
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ steps.extract_notes.outputs.has_notes == 'true' && steps.extract_notes.outputs.body || '' }}
+          generate_release_notes: ${{ steps.extract_notes.outputs.has_notes != 'true' }}
+          files: |
+            dist-release/*-portable.exe
