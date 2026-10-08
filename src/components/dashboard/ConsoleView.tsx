@@ -572,6 +572,8 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
                   */
                   <div
                     key={game.id}
+                    tabIndex={0}
+                    data-gp-focusable="true"
                     onClick={() => {
                       if (hoverTimeoutRef.current) {
                         clearTimeout(hoverTimeoutRef.current);
@@ -579,6 +581,11 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({
                       }
                       if (!isSelected && realIndex >= 0) {
                         audioEngine.playHover();
+                        onSelectGame(realIndex);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (!isSelected && realIndex >= 0) {
                         onSelectGame(realIndex);
                       }
                     }}

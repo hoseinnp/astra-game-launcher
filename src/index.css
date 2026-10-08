@@ -561,3 +561,24 @@ body {
   --radius-2xl: var(--ui-rounding, 1rem);
   --radius-3xl: var(--ui-rounding, 1.5rem);
 }
+
+/* Controller Mode Focus Glow */
+.controller-mode [data-gp-focusable="true"]:focus,
+.controller-mode button:focus,
+.controller-mode input:focus,
+.controller-mode select:focus,
+.controller-mode textarea:focus,
+.controller-mode [tabindex]:not([tabindex="-1"]):focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--game-accent, var(--accent, #2ee5ba)), 0 0 15px var(--game-glow, var(--accent-glow, rgba(46,229,186,0.3))) !important;
+  z-index: 50;
+  position: relative;
+  transition: box-shadow 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.reduce-effects .controller-mode *:focus {
+    box-shadow: 0 0 0 2px var(--accent, #2ee5ba) !important;
+    transition: none;
+  }
+}

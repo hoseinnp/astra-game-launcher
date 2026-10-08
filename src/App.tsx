@@ -95,16 +95,16 @@ function getActiveModalContainer(): HTMLElement | null {
     return style.display !== 'none' && style.visibility !== 'hidden';
   });
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) return document.body;
   return candidates[candidates.length - 1];
 }
 
-function navigateModalFocus(action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): boolean {
+function navigateSpatialFocus(action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): boolean {
   const container = getActiveModalContainer();
   if (!container) return false;
 
   const focusables = Array.from(
-    container.querySelectorAll<HTMLElement>(FOCUSABLE_MODAL_SELECTOR)
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_MODAL_SELECTOR + ', [data-gp-focusable="true"]')
   ).filter(isModalElementVisible);
 
   if (focusables.length === 0) return false;
@@ -179,7 +179,6 @@ function navigateModalFocus(action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'): boolean {
     hapticsService.trigger('light-tick');
     return true;
   }
-
   return false;
 }
 
@@ -256,6 +255,8 @@ export const App: React.FC = () => {
 
   const selectedIndexRef = useRef(selectedGameIndex);
   const gamesRef = useRef(games);
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
   const isAnyModalOpenRef = useRef(false);
   const isAnyModalOpen =
     isCommandPaletteOpen ||
@@ -508,6 +509,7 @@ export const App: React.FC = () => {
   // Save changes
   useEffect(() => {
     if (isLoaded) {
+      gamepadEngine.updateConfig({ deadzone: settings.gamepadDeadzone ?? 0.4 });
       StoreService.save(games, settings, profiles);
     }
   }, [games, settings, profiles, isLoaded]);
@@ -956,50 +958,49 @@ export const App: React.FC = () => {
       const curGames = gamesRef.current;
       const curIndex = selectedIndexRef.current;
 
-      if (isAnyModalOpenRef.current) {
-        if (action === 'BACK') {
+      if (settingsRef.current.controllerSupport === false) return;
+
+      if (action === 'BACK') {
+        const active = document.activeElement as HTMLElement | null;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+          active.blur();
+          return;
+        }
+        if (isAnyModalOpenRef.current) {
           hapticsService.trigger('back');
           dismissTopModalRef.current();
-          return;
-        }
-        if (action === 'UP' || action === 'DOWN' || action === 'LEFT' || action === 'RIGHT') {
-          navigateModalFocus(action);
-          return;
-        }
-        if (action === 'CONFIRM') {
-          confirmModalFocus();
-          return;
         }
         return;
       }
 
-      if (action === 'RIGHT') {
-        if (curIndex < curGames.length - 1) {
-          audioEngine.playHover();
-          hapticsService.trigger('light-tick');
-          setSelectedGameIndex((prev) => Math.min(prev + 1, curGames.length - 1));
+      if (action === 'UP' || action === 'DOWN' || action === 'LEFT' || action === 'RIGHT') {
+        const active = document.activeElement as HTMLElement | null;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+          return; // Allow native interaction or prevent jumping
         }
-      } else if (action === 'LEFT') {
-        if (curIndex > 0) {
-          audioEngine.playHover();
-          hapticsService.trigger('light-tick');
-          setSelectedGameIndex((prev) => Math.max(prev - 1, 0));
-        }
-      } else if (action === 'CONFIRM') {
+        navigateSpatialFocus(action);
+        return;
+      }
+
+      if (action === 'CONFIRM') {
         hapticsService.trigger('confirm');
-        const target = curGames[curIndex];
-        if (target) handleLaunchGame(target);
-      } else if (action === 'DETAILS') {
+        confirmModalFocus();
+        return;
+      }
+
+      if (action === 'DETAILS') { // X/Square context action
         audioEngine.playSelect();
         hapticsService.trigger('light-tick');
-        setIsIntelDrawerOpen((prev) => !prev);
-      } else if (action === 'BACK') {
-        hapticsService.trigger('back');
-        setIsIntelDrawerOpen(false);
-      } else if (action === 'NOTES') {
+        const active = document.activeElement as HTMLElement | null;
+        if (active && active.hasAttribute('data-gp-context')) {
+           active.click();
+        } else if (!isAnyModalOpenRef.current && curGames[curIndex]) {
+           handleToggleFavorite(curGames[curIndex].id);
+        }
+      } else if (action === 'NOTES') { // Y/Triangle Search
         audioEngine.playSelect();
         hapticsService.trigger('light-tick');
-        setIsRecommendationsOpen((prev) => !prev);
+        setIsCommandPaletteOpen(true);
       } else if (action === 'FAVORITE') {
         hapticsService.trigger('confirm');
         const target = curGames[curIndex];
@@ -1014,11 +1015,11 @@ export const App: React.FC = () => {
       } else if (action === 'START') {
         audioEngine.playSelect();
         hapticsService.trigger('confirm');
-        setIsSettingsModalOpen((prev) => !prev);
+        setIsSettingsModalOpen(true);
       } else if (action === 'SELECT') {
         audioEngine.playSelect();
         hapticsService.trigger('confirm');
-        setIsCommandPaletteOpen((prev) => !prev);
+        setIsRecommendationsOpen(true);
       }
     });
   }, [handleLaunchGame]);
@@ -1356,7 +1357,7 @@ export const App: React.FC = () => {
       </div>
 
       {/* Navigation HUD: Console Action Bar with Dynamic Platform Glyphs (Optional / Configurable) */}
-      {settings.showNavigationHud && (
+      {(settings.showNavigationHud || activeInputMode === 'controller') && (
         <NavigationHud
           activeInputMode={activeInputMode}
           controllerDetails={controllerDetails}
