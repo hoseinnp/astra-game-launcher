@@ -33,5 +33,21 @@ scratch
 
 astra-game-launcher/
 
+# AI assistant / agent tooling & workflow files
+.gemini/
+.superpowers/
+.agent/
 .agents/
-
+.claude/
+.cursor/
+.windsurf/
+.antigravity/
+.github/copilot*
+GEMINI.md
+CLAUDE.md
+AGENTS.md
+TASK_QUEUE.md
+AGY_REPORT.md
+test-*.mjs
+test-*.js
+scratch/
