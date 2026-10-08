@@ -1,27 +1,27 @@
 # TASK_QUEUE
 
-## Current task: Task F - Controller (gamepad) support
-Branch: create `feat/controller-support` from up-to-date `main`. NEVER force-push (no `--force`, no `--force-with-lease`, no amending pushed commits). No new dependencies: use the browser Gamepad API (`navigator.getGamepads()`) in the renderer.
+## Current task: Task F2 - Close-out audit of Task F (controller support)
+Your last report was missing: verification results, merge status/hash, a file list, and a per-requirement status. Do NOT add new features beyond the gaps below. NEVER force-push (no `--force`, no `--force-with-lease`, no amending pushed commits).
 
-Goal: the whole launcher, especially the PS5/console view, is fully usable with an Xbox/PlayStation-style controller. Mouse and keyboard behavior must not change.
+Steps:
+1. `git fetch origin`. Determine whether `feat/controller-support` is merged into `main` (`git branch -r --merged origin/main`). If NOT merged and everything is green after step 3, merge with `git merge --no-ff` and push main normally.
+2. Audit the code against Task F requirements and mark each as DONE / PARTIAL / MISSING with the file(s) responsible:
+   a. GamepadService polling only while a gamepad is connected AND window focused (zero polling otherwise)
+   b. Mapping: D-pad/left stick move, A activate, B back/close top modal, X context action, Y open search, LB/RB switch view mode (and Settings category tabs inside Settings), Start opens Settings, Select opens Recommendations or Activity
+   c. Spatial navigation across PS5 tiles, grid cards, shelf items, TopBar buttons, and inside every modal with focus trapped in the top modal; B restores previous focus
+   d. Scroll-into-view (instant when `html.reduce-effects`)
+   e. Focus ring uses `--accent`/`--accent-glow`, only in controller mode, exits on mouse move or key press, respects reduce-effects
+   f. Hint bar with Xbox vs PlayStation glyphs by gamepad id; hides on mouse/keyboard
+   g. Connect/disconnect toast
+   h. Settings: Controller support toggle, deadzone slider, Vibration feedback toggle (default OFF, uses `vibrationActuator` when available)
+   i. Safety: ignores nav while text input focused, while a game launch/running overlay is active; no conflict with Mini-HUD hotkey or global shortcuts
+3. Implement every MISSING or PARTIAL item that is small and low-risk. For large gaps, do not implement; list them. Then run `npx tsc -b`, `npx vite build`, `npx oxlint` (touched files) and re-run your mocked-gamepad headless test for the behaviors you can test.
+4. Make sure no temp test scripts (e.g. `test-controller.cjs`) or build output are committed to `main`; if any are, remove them in a normal commit.
 
-Requirements:
-1. Input service: one small `GamepadService` (singleton, requestAnimationFrame polling, only while a gamepad is connected and the window is focused). Standard mapping: D-pad and left stick (deadzone ~0.4, repeat delay ~350ms then ~120ms) = move focus; A/Cross = activate focused item; B/Circle = back / close top modal; X/Square = context action if one exists (e.g. favorite/launch), otherwise nothing; Y/Triangle = open search; LB/RB = switch view mode (PS5/grid/shelf) or category tab when inside Settings; Start = open Settings; Select/Back = open Recommendations or Activity (pick what exists). Emit connect/disconnect events.
-2. Spatial focus navigation: a lightweight spatial-navigation helper that moves focus to the nearest focusable element in the pressed direction (use bounding boxes, no library). Mark focusable items with an attribute (e.g. `data-gp-focusable`) or reuse tabindex/buttons. Works across PS5 tiles, grid cards, shelf items, TopBar buttons, and inside every modal (focus is trapped in the top modal while it is open; B closes it and restores previous focus). Scroll focused item into view smoothly (instant when `html.reduce-effects`).
-3. Visual focus: a clear focus ring/glow on the focused element using the existing `--accent` and `--accent-glow` variables; shown only while controller mode is active (switches to controller mode on gamepad input, back to normal on mouse move or key press). Respect `html.reduce-effects` and `prefers-reduced-motion`.
-4. Controller hint bar: small bottom-corner legend (A Select, B Back, LB/RB Switch view, Start Settings) that appears only in controller mode, adapts glyphs to Xbox vs PlayStation by gamepad id, hides when mouse/keyboard is used. A toast on connect/disconnect.
-5. Settings > (Input or System): "Controller support" toggle (default ON), deadzone slider, "Vibration feedback" toggle (light pulse on activate via `vibrationActuator` when available, default OFF). Persist using the existing settings/localStorage pattern.
-6. Safety: ignore gamepad navigation while a text input/textarea is focused, while a game is launching/running overlay is active, and when no window focus. Must not conflict with Mini-HUD hotkey or other global shortcuts. Must not steal focus or break anything when no gamepad is connected (zero overhead: no polling).
-7. Do not change IPC contracts, game launching logic, or unrelated services. Wrap new UI in the existing `ErrorBoundary` pattern where relevant.
-
-Verification (all must pass): `npx tsc -b` 0 errors, `npx vite build` succeeds, `npx oxlint` 0 errors on touched files. Headless browser test with a mocked `navigator.getGamepads` (temp script, delete before committing): connect event shows toast + hint bar; D-pad moves focus across PS5 tiles and grid cards; A opens game overview; B closes it; LB/RB switch view; Start opens Settings and focus stays trapped inside; typing in search input is not hijacked; mouse move exits controller mode; no polling when no gamepad. Report any part that could not be tested headlessly.
-
-Finish: if everything is green, merge `feat/controller-support` into `main` with `git merge --no-ff`, push main normally, push the branch, do NOT edit TASK_QUEUE.md, do NOT delete branches.
-
-Report only: merge hash, files added/changed (names), behaviors verified, behaviors NOT verified headlessly (so the owner can test with a real controller), verification results.
+Model suggestion: Gemini Flash medium (switch to Pro 3.1 only if many gaps are PARTIAL/MISSING).
 
 ## Report file (mandatory, every task)
-After finishing, write your final report to `AGY_REPORT.md` in the repo root (overwrite it each task; max 40 lines; same content as the Report format above, plus the model you ran on if you know it). Commit ONLY that file on `main` with message `docs: agy report` and `git push origin main` (normal push, no force). Do not touch TASK_QUEUE.md. If the task failed or you aborted, still write the report explaining why.
+After finishing, OVERWRITE `AGY_REPORT.md` in the repo root (max 40 lines). It MUST contain: (1) merge status of `feat/controller-support` and the main commit hash, (2) the a-i checklist with DONE/PARTIAL/MISSING, (3) verification results (`tsc`, `build`, `oxlint`, headless test pass/fail), (4) list of files added/changed, (5) behaviors NOT verifiable headlessly (for real-controller testing by the owner). Commit ONLY that file on `main` with message `docs: agy report` and `git push origin main` (normal push, no force). Do not touch TASK_QUEUE.md. If you failed or aborted, still write the report explaining why.
 
 ## Skipped (do NOT execute)
 - Task #7: Game Oracle. Skipped, pending owner decision.
@@ -33,3 +33,4 @@ After finishing, write your final report to `AGY_REPORT.md` in the repo root (ov
 - Task C: Merged UI branches into main (c6cc3e4)
 - Task D: Merged mini-hud (e407481) and retro-hub (4e6a06f) into main
 - Task E: Stabilization, error boundaries, README, packaging (merged to main, 3ff6bb4)
+- Task F: Controller support implemented on feat/controller-support (merge/verification pending Task F2)
