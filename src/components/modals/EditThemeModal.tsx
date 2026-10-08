@@ -288,18 +288,18 @@ export const EditThemeModal: React.FC<EditThemeModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn"
       onClick={() => {
         if (isPlayingPreview) audioEngine.stopBgm();
         onClose();
       }}
     >
       <div
-        className="w-full max-w-3xl rounded-3xl bg-[#0b0e17] border border-white/15 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-modalIn transform-gpu will-change-transform"
+        className="w-full max-w-3xl max-w-[calc(100vw-1.5rem)] rounded-2xl sm:rounded-3xl bg-[#0b0e17] border border-white/15 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] max-h-[calc(100vh-1.5rem)] animate-modalIn transform-gpu will-change-transform min-w-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-black shadow-md"

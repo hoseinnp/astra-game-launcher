@@ -1,16 +1,105 @@
 @import "tailwindcss";
 
 :root {
-  --game-accent: #2ee5ba;
-  --game-accent-contrast: #000000;
-  --game-glow: rgba(46, 229, 186, 0.45);
-  --global-accent: #2ee5ba;
-  --global-accent-contrast: #000000;
-  --global-glow: rgba(46, 229, 186, 0.45);
+  --accent: #2ee5ba;
+  --accent-contrast: #000000;
+  --glow-intensity: 70;
+  --accent-glow: rgba(46, 229, 186, calc(var(--glow-intensity) / 100 * 0.65));
+  --game-accent: var(--accent);
+  --game-accent-contrast: var(--accent-contrast);
+  --game-glow: var(--accent-glow);
+  --global-accent: var(--accent);
+  --global-accent-contrast: var(--accent-contrast);
+  --global-glow: var(--accent-glow);
   --global-bg-start: #071612;
   --global-bg-end: #020705;
   color-scheme: dark;
+
+  /* Motion & Effects CSS Variables for Task A / Task B */
+  --motion-duration-fast: 180ms;
+  --motion-duration-normal: 260ms;
+  --motion-duration-slow: 400ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --effect-glow-opacity: calc(var(--glow-intensity) / 100);
+  --effect-blur-filter: blur(16px);
+  --effect-blur-subtle: blur(10px);
 }
+
+/* Reduced Effects & Preferences */
+html.reduce-effects,
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms !important;
+    --motion-duration-normal: 0ms !important;
+    --motion-duration-slow: 0ms !important;
+    --effect-glow-opacity: 0 !important;
+    --effect-blur-filter: none !important;
+    --effect-blur-subtle: none !important;
+    --game-glow: transparent !important;
+    --global-glow: transparent !important;
+  }
+
+  html.reduce-effects *,
+  html.reduce-effects *::before,
+  html.reduce-effects *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Accessible and visible keyboard focus rings */
+:focus-visible {
+  outline: 2px solid var(--accent, #2ee5ba) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 14px var(--accent-glow, rgba(46, 229, 186, 0.45)) !important;
+}
+
+/* Card hover lift & glow */
+.hover-lift-glow {
+  transition: transform var(--motion-duration-fast) var(--motion-ease), box-shadow var(--motion-duration-fast) var(--motion-ease), border-color var(--motion-duration-fast) var(--motion-ease);
+}
+.hover-lift-glow:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 20px var(--accent-glow);
+}
+
+/* Staggered card entry */
+@keyframes cardStaggerIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale3d(0.97, 0.97, 1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+.animate-card-stagger {
+  animation: cardStaggerIn var(--motion-duration-normal) var(--motion-ease) both;
+}
+
+/* Cross-fade view transition */
+@keyframes viewCrossFade {
+  from {
+    opacity: 0;
+    transform: scale3d(0.99, 0.99, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+.animate-view-fade {
+  animation: viewCrossFade var(--motion-duration-fast) var(--motion-ease) both;
+}
+
 
 body {
   margin: 0;

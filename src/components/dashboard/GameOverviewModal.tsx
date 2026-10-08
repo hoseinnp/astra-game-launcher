@@ -222,11 +222,11 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10 bg-black/80 backdrop-blur-xl animate-fadeIn isolate"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 md:p-10 bg-black/80 backdrop-blur-xl animate-fadeIn isolate"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl bg-[#0a0d14] border border-white/15 shadow-2xl overflow-hidden relative animate-modalIn transform-gpu will-change-transform"
+        className="w-full max-w-5xl max-w-[calc(100vw-1rem)] max-h-[92vh] max-h-[calc(100vh-1rem)] flex flex-col rounded-2xl sm:rounded-3xl bg-[#0a0d14] border border-white/15 shadow-2xl overflow-hidden relative animate-modalIn transform-gpu will-change-transform min-w-0"
         onClick={(e) => e.stopPropagation()}
         style={{
           boxShadow: `0 25px 60px -15px rgba(0,0,0,0.9), 0 0 40px -10px ${game.theme?.glowColor || 'rgba(46,229,186,0.2)'}`
@@ -335,9 +335,9 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
         </div>
 
         {/* ACTION BAR & TABS */}
-        <div className="px-6 sm:px-8 py-3.5 bg-black/40 border-y border-white/10 flex items-center justify-between gap-4 flex-wrap">
+        <div className="px-4 sm:px-8 py-3 bg-black/40 border-y border-white/10 flex items-center justify-between gap-3 flex-wrap min-w-0">
           {/* Quick Launch & Options */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar max-w-full flex-nowrap py-1">
             <button
               onClick={() => {
                 audioEngine.playLaunch();
@@ -349,10 +349,10 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                 color: contrastColor,
                 boxShadow: '0 0 25px -3px var(--game-glow)'
               }}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>Launch Game</span>
+              <span>Launch</span>
             </button>
 
             <button
@@ -361,7 +361,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                 onOpenNotes();
                 onClose();
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer flex-shrink-0"
             >
               <span>Notes</span>
             </button>
@@ -372,7 +372,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                 onOpenThemeEditor(game);
                 onClose();
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer flex-shrink-0"
             >
               <Settings className="w-3.5 h-3.5" />
               <span>Customize</span>
@@ -384,7 +384,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                   audioEngine.playSelect();
                   onOpenMods(game);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer flex-shrink-0"
                 title="Manage Mods & Add-On Packs"
               >
                 <Layers className="w-3.5 h-3.5 text-[var(--game-accent)]" />
@@ -398,7 +398,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                   audioEngine.playSelect();
                   onOpenSaveVault(game);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl glass-pill text-xs font-semibold text-white/80 hover:text-white cursor-pointer flex-shrink-0"
                 title="Save Game Vault & Snapshots"
               >
                 <Shield className="w-3.5 h-3.5 text-emerald-400" />
@@ -412,7 +412,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                   audioEngine.playSelect();
                   onOpenFolder(game);
                 }}
-                className="p-2.5 rounded-xl glass-pill text-white/60 hover:text-white cursor-pointer"
+                className="p-2.5 rounded-xl glass-pill text-white/60 hover:text-white cursor-pointer flex-shrink-0"
                 title="Open Game Folder"
               >
                 <Folder className="w-4 h-4" />
@@ -426,7 +426,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
                 const updated = { ...game, hidden: !game.hidden };
                 onUpdateGame(updated);
               }}
-              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all flex-shrink-0 ${
                 game.hidden
                   ? 'text-amber-300 border-amber-500/40 bg-amber-500/10'
                   : 'text-white/70 hover:text-white'
@@ -441,7 +441,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
             <button
               onClick={handleCreateShortcut}
               disabled={isCreatingShortcut}
-              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl glass-pill text-xs font-semibold cursor-pointer transition-all flex-shrink-0 ${
                 shortcutStatus === '✓ Added!'
                   ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
                   : 'text-white/70 hover:text-white hover:border-white/30'
@@ -454,7 +454,7 @@ export const GameOverviewModal: React.FC<GameOverviewModalProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs overflow-x-auto no-scrollbar max-w-full flex-nowrap py-1">
             <button
               onClick={() => {
                 audioEngine.playHover();

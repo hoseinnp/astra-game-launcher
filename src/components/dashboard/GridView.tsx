@@ -4,6 +4,7 @@ import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { ThemeEngine } from '../../services/themeEngine';
 import { normalizeMediaUrl } from '../../utils/mediaUrl';
+import { GameCover } from '../GameCover';
 
 export type GridDensity = 'poster' | 'banner' | 'compact';
 
@@ -74,13 +75,13 @@ export const GridView: React.FC<GridViewProps> = ({
         if (activeFilter === 'completed') return g.collection === 'completed';
         if (activeFilter === 'standalone') return g.type === 'standalone';
         if (activeFilter === 'steam') return g.type === 'steam';
-        return g.genres.includes(activeFilter);
+        return g.genres?.includes(activeFilter) ?? false;
       })
       .sort((a, b) => {
         if (sortBy === 'title') return a.title.localeCompare(b.title);
-        if (sortBy === 'playtime') return b.stats.playtimeMinutes - a.stats.playtimeMinutes;
-        const aDate = a.stats.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
-        const bDate = b.stats.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
+        if (sortBy === 'playtime') return (b.stats?.playtimeMinutes ?? 0) - (a.stats?.playtimeMinutes ?? 0);
+        const aDate = a.stats?.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
+        const bDate = b.stats?.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
         return bDate - aDate;
       });
   }, [games, activeFilter, searchQuery, sortBy]);
@@ -185,7 +186,7 @@ export const GridView: React.FC<GridViewProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 w-full h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden px-8 py-4 select-none isolate pb-14"
+      className="relative flex-1 w-full h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden px-3 sm:px-6 md:px-8 py-3 sm:py-4 select-none isolate pb-14 min-w-0"
     >
       {/* Dynamic Ambient Background Wallpaper */}
       {games[selectedGameIndex] && (
@@ -201,9 +202,9 @@ export const GridView: React.FC<GridViewProps> = ({
       )}
 
       {/* Controls Bar: Filter Pills, Search & Density Switcher */}
-      <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10 flex-wrap z-10">
+      <div className="flex items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-white/10 flex-wrap z-10 w-full min-w-0">
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 max-w-full min-w-0 flex-nowrap sm:flex-wrap">
           <button
             onClick={() => {
               audioEngine.playHover();
@@ -297,7 +298,7 @@ export const GridView: React.FC<GridViewProps> = ({
         </div>
 
         {/* Right Tools: View Density Switcher, Sort & Search */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
           {/* Density Switcher */}
           <div className="flex items-center glass-pill rounded-lg p-0.5 border border-white/15">
             <button
@@ -341,7 +342,7 @@ export const GridView: React.FC<GridViewProps> = ({
             placeholder="Search games..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 rounded-lg glass-pill border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] w-36 sm:w-48 transition-all"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg glass-pill border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] w-28 sm:w-44 transition-all"
           />
 
           {/* Sort selector */}
@@ -350,7 +351,7 @@ export const GridView: React.FC<GridViewProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'lastPlayed' | 'playtime' | 'title')}
-              className="bg-transparent border-none text-white/80 focus:outline-none cursor-pointer"
+              className="bg-transparent border-none text-white/80 focus:outline-none cursor-pointer text-xs"
             >
               <option value="lastPlayed" className="bg-[#0b0e14]">Last Played</option>
               <option value="playtime" className="bg-[#0b0e14]">Most Played</option>
@@ -361,7 +362,7 @@ export const GridView: React.FC<GridViewProps> = ({
       </div>
 
       {/* Main Grid Area */}
-      <div className="flex-1 overflow-y-auto py-6 pr-2 z-10">
+      <div className="flex-1 overflow-y-auto py-4 sm:py-6 px-1 sm:px-4 md:px-8 z-10 min-w-0">
         {filteredGames.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-white/50 text-xs">
             <p className="font-semibold text-white/70 text-sm">No games found</p>
@@ -393,9 +394,10 @@ export const GridView: React.FC<GridViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <img
+                    <GameCover
                       src={normalizeMediaUrl(game.coverUrl)}
-                      alt={game.title}
+                      title={game.title}
+                      accent={game.theme?.accentColor}
                       className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="min-w-0">
@@ -437,10 +439,10 @@ export const GridView: React.FC<GridViewProps> = ({
                     <div className="text-right hidden sm:block">
                       <div className="text-xs font-semibold text-white flex items-center gap-1 justify-end">
                         <Clock className="w-3 h-3 text-[var(--game-accent)]" />
-                        <span>{formatPlaytime(game.stats.playtimeMinutes)}</span>
+                        <span>{formatPlaytime(game.stats?.playtimeMinutes ?? 0)}</span>
                       </div>
                       <div className="text-[10px] text-white/40">
-                        {game.stats.lastPlayed ? new Date(game.stats.lastPlayed).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Never'}
+                        {game.stats?.lastPlayed ? new Date(game.stats.lastPlayed).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Never'}
                       </div>
                     </div>
 
@@ -463,19 +465,20 @@ export const GridView: React.FC<GridViewProps> = ({
         ) : (
           /* POSTER OR BANNER GRID */
           <div
-            className={`grid gap-6 ${
+            className={`grid gap-4 sm:gap-6 ${
               density === 'banner'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
-                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]'
+                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]'
             }`}
           >
-            {filteredGames.map((game) => {
+            {filteredGames.map((game, idx) => {
               const originalIndex = gameIndexMap.get(game.id) ?? 0;
               const isSelected = originalIndex === selectedGameIndex;
               const itemVibe = ThemeEngine.getVibeConfig(game.theme?.vibe, game);
               const cardImage = density === 'banner'
                 ? (game.backdropUrl || game.coverUrl)
                 : game.coverUrl;
+              const staggerDelay = `${Math.min(idx * 35, 450)}ms`;
 
               return (
                 /* 2-LAYER CARD ARCHITECTURE FOR UNCLIPPED GLOW */
@@ -490,15 +493,16 @@ export const GridView: React.FC<GridViewProps> = ({
                     onSelectGame(originalIndex);
                   }}
                   style={{
+                    animationDelay: staggerDelay,
                     filter: isSelected
                       ? itemVibe.id === 'retro-arcade'
                         ? 'drop-shadow(6px 6px 0px #000) drop-shadow(0 0 20px var(--game-glow))'
                         : itemVibe.id === 'anime-stylized'
                         ? 'drop-shadow(8px 8px 0px rgba(0,0,0,0.85)) drop-shadow(0 0 25px var(--game-glow))'
-                        : 'drop-shadow(0 16px 18px rgba(0,0,0,0.75))'
+                        : 'drop-shadow(0 16px 18px rgba(0,0,0,0.75)) drop-shadow(0 0 16px var(--accent-glow))'
                       : undefined
                   }}
-                  className={`group relative cursor-pointer flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform hover:-translate-y-2 ${
+                  className={`group relative cursor-pointer flex flex-col transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform hover:-translate-y-2 hover:drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] animate-card-stagger ${
                     isSelected ? 'scale-105 z-20' : 'z-10'
                   }`}
                 >
@@ -515,9 +519,10 @@ export const GridView: React.FC<GridViewProps> = ({
                   >
                     {/* Image Area */}
                     <div className={`relative w-full overflow-hidden ${density === 'banner' ? 'aspect-video' : 'aspect-[3/4]'}`}>
-                      <img
+                      <GameCover
                         src={normalizeMediaUrl(cardImage)}
-                        alt={game.title}
+                        title={game.title}
+                        accent={game.theme?.accentColor}
                         className="w-full h-full object-cover object-top group-hover:scale-103 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
                       />
 
@@ -643,7 +648,7 @@ export const GridView: React.FC<GridViewProps> = ({
                             <span>{game.achievements.filter((a) => a.unlocked).length}/{game.achievements.length}</span>
                           </span>
                         ) : (
-                          <span className="truncate">{game.genres[0] || 'Game'}</span>
+                          <span className="truncate">{game.genres?.[0] || 'Game'}</span>
                         )}
                       </div>
                     </div>

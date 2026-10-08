@@ -202,22 +202,22 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
   const activeSaveLocation = locations.find((l) => l.exists);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn select-none">
-      <div className="w-full max-w-3xl max-h-[88vh] rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn select-none">
+      <div className="w-full max-w-3xl max-w-[calc(100vw-1.5rem)] max-h-[92vh] max-h-[calc(100vh-1.5rem)] rounded-2xl sm:rounded-3xl bg-zinc-950/95 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden animate-modalIn isolate relative min-w-0">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 z-10 bg-white/5 backdrop-blur-md flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-lg flex-shrink-0">
               <Shield className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white tracking-wider uppercase">Save Game Vault</h2>
+                <h2 className="text-sm sm:text-base font-black text-white tracking-wider uppercase truncate">Save Game Vault</h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30 flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> PROTECTED
                 </span>
               </div>
-              <p className="text-xs text-white/50">{game.title} • Zipped Snapshots & Safety Rollbacks</p>
+              <p className="text-xs text-white/50 truncate">{game.title} • Zipped Snapshots & Safety Rollbacks</p>
             </div>
           </div>
 
@@ -225,7 +225,7 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
             <button
               onClick={handleOpenFolder}
               title="Open Vault Storage Directory"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-pill hover:bg-white/15 text-xs font-semibold text-white/80 hover:text-white transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-pill hover:bg-white/15 text-xs font-semibold text-white/80 hover:text-white transition-all cursor-pointer flex-shrink-0"
             >
               <FolderOpen className="w-3.5 h-3.5 text-amber-300" />
               <span>Explore Vault</span>
@@ -243,7 +243,7 @@ export const SaveVaultModal: React.FC<SaveVaultModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center px-6 border-b border-white/10 bg-white/[0.02]">
+        <div className="flex items-center px-4 sm:px-6 border-b border-white/10 bg-white/[0.02] overflow-x-auto no-scrollbar max-w-full flex-nowrap py-1">
           <button
             onClick={() => {
               audioEngine.playHover();

@@ -6,6 +6,7 @@ import {
 import type { Game } from '../../types/game';
 import { audioEngine } from '../../services/audioEngine';
 import { hapticsService } from '../../services/hapticsService';
+import { GameCover } from '../GameCover';
 
 interface PhysicalShelfViewProps {
   games: Game[];
@@ -453,9 +454,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
           {/* Front Cartridge Label Art with Gloss Finish */}
           <div className="p-2 h-[142px]">
             <div className="relative w-full h-full rounded-md overflow-hidden border border-white/20 shadow-inner bg-black">
-              <img
+              <GameCover
                 src={game.coverUrl}
-                alt={game.title}
+                title={game.title}
+                accent={game.theme?.accentColor}
                 className="w-full h-full object-cover select-none filter contrast-110"
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent pointer-events-none" />
@@ -507,9 +509,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             <Disc className={`w-2.5 h-2.5 text-white ${isHovered ? 'animate-spin' : ''}`} />
           </div>
           {/* Cover Art */}
-          <img
+          <GameCover
             src={game.coverUrl}
-            alt={game.title}
+            title={game.title}
+            accent={game.theme?.accentColor}
             className="w-full h-full object-cover pl-3 pt-5 select-none"
           />
           {/* Acrylic Glass Specular Reflection */}
@@ -536,9 +539,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             </span>
             <span className="text-[8px] font-bold text-emerald-400 font-mono">CLASSIC</span>
           </div>
-          <img
+          <GameCover
             src={game.coverUrl}
-            alt={game.title}
+            title={game.title}
+            accent={game.theme?.accentColor}
             className="w-full h-full object-cover pt-5 select-none"
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent pointer-events-none opacity-40" />
@@ -568,9 +572,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             {game.type === 'steam' ? 'STEAM' : 'DISC'}
           </span>
         </div>
-        <img
+        <GameCover
           src={game.coverUrl}
-          alt={game.title}
+          title={game.title}
+          accent={game.theme?.accentColor}
           className="w-full h-full object-cover pt-5 select-none"
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent pointer-events-none opacity-40 group-hover:opacity-80 transition-opacity" />
@@ -589,11 +594,11 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
   };
 
   return (
-    <div className={`relative flex-1 flex flex-col h-full overflow-hidden select-none transition-colors duration-700 ${shelfStyles.backwall}`}>
+    <div className={`relative flex-1 flex flex-col h-full overflow-hidden select-none transition-colors duration-700 min-w-0 ${shelfStyles.backwall}`}>
       {/* Top Shelf Controls Bar */}
-      <div className="z-30 px-8 py-3 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md">
+      <div className="z-30 px-3 sm:px-6 md:px-8 py-2.5 sm:py-3 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md flex-wrap gap-2 min-w-0">
         {/* Left: Collection Filter Chips */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-full flex-nowrap py-1">
           {[
             { id: 'all', label: 'All Titles', count: games.length },
             { id: 'playing', label: 'Now Playing', count: games.filter((g) => g.collection === 'playing').length },
@@ -609,7 +614,7 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                   audioEngine.playSelect();
                   setActiveCollection(tab.id);
                 }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer flex-shrink-0 ${
                   active
                     ? 'bg-white/20 text-white border border-white/30 shadow-md'
                     : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -625,14 +630,14 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
         </div>
 
         {/* Right: Search & Shelf Material Texture Selector */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <div className="relative">
             <input
               type="text"
               placeholder="Search library..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] focus:bg-white/10 transition-colors w-40"
+              className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[var(--game-accent)] focus:bg-white/10 transition-colors w-32 sm:w-40"
             />
             {searchQuery && (
               <button
@@ -692,7 +697,7 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
           tiers.map((tier, tierIdx) => (
             <div key={tierIdx} className="relative pt-6 pb-2">
               {/* 3D Game Boxes / Cartridges on Shelf */}
-              <div className="flex items-end justify-start gap-8 px-6 overflow-x-auto no-scrollbar [perspective:1400px]">
+              <div className="flex items-end justify-start gap-8 px-8 pt-8 pb-2 overflow-x-auto no-scrollbar [perspective:1400px]">
               {tier.map((game) => {
                 const isSelected = games[selectedGameIndex]?.id === game.id;
                 const isHovered = hoveredGameId === game.id;
@@ -786,16 +791,16 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
             </div>
           )}
 
-          <div className="relative w-full max-w-6xl h-[90vh] flex flex-col rounded-3xl bg-[#090d16] border border-white/15 shadow-[0_0_80px_rgba(0,0,0,0.95)] overflow-hidden animate-modalIn">
+          <div className="relative w-full max-w-6xl max-w-[calc(100vw-1.5rem)] h-[90vh] max-h-[calc(100vh-1.5rem)] flex flex-col rounded-2xl sm:rounded-3xl bg-[#090d16] border border-white/15 shadow-[0_0_80px_rgba(0,0,0,0.95)] overflow-hidden animate-modalIn">
             {/* Top Toolbar: Resident Evil Remake Header */}
-            <div className="flex items-center justify-between px-6 py-3.5 border-b border-white/10 bg-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-[var(--game-accent,#2ee5ba)] to-purple-600 flex items-center justify-center text-black font-black shadow-lg">
-                  <Compass className="w-5 h-5 text-black" />
+            <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-white/10 bg-white/5 flex-wrap gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 via-[var(--game-accent,#2ee5ba)] to-purple-600 flex items-center justify-center text-black font-black shadow-lg flex-shrink-0">
+                  <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black text-white tracking-widest uppercase">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs sm:text-base font-black text-white tracking-widest uppercase truncate">
                       EXAMINE ITEM
                     </h3>
                     <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-[var(--game-accent,#2ee5ba)]/20 text-[var(--game-accent,#2ee5ba)] border border-[var(--game-accent,#2ee5ba)]/30">
@@ -813,14 +818,14 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-white/50 font-mono">
+                  <p className="text-[10px] sm:text-[11px] text-white/50 font-mono hidden sm:block">
                     Drag to rotate 360° • Scroll wheel to Zoom ({Math.round(zoom * 100)}%) • [F] Flip • [B] Blow Dust
                   </p>
                 </div>
               </div>
 
               {/* Action Toolbar */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 {/* 180 Flip Button */}
                 <button
                   onClick={handleFlip180}
@@ -1014,9 +1019,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                       {/* Front Label Recess with High-Gloss Art Sticker */}
                       <div className="p-4 h-[255px] relative">
                         <div className="relative w-full h-full rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black">
-                          <img
+                          <GameCover
                             src={inspectingGame.coverUrl}
-                            alt={inspectingGame.title}
+                            title={inspectingGame.title}
+                            accent={inspectingGame.theme?.accentColor}
                             className="w-full h-full object-cover select-none filter contrast-110"
                           />
                           {/* Gloss Sheen Reflection */}
@@ -1170,9 +1176,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                       </div>
 
                       {/* Front Cover Art */}
-                      <img
+                      <GameCover
                         src={inspectingGame.coverUrl}
-                        alt={inspectingGame.title}
+                        title={inspectingGame.title}
+                        accent={inspectingGame.theme?.accentColor}
                         className="w-full h-full object-cover pt-8 select-none"
                       />
 
@@ -1241,9 +1248,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                             transform: 'translateZ(2px)'
                           }}
                         >
-                          <img
+                          <GameCover
                             src={inspectingGame.coverUrl}
-                            alt="3D Disc Art"
+                            title={inspectingGame.title}
+                            accent={inspectingGame.theme?.accentColor}
                             className="w-full h-full object-cover select-none filter contrast-125 brightness-95"
                           />
 
@@ -1436,9 +1444,10 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                           >
                             {/* Disc Artwork Overlay */}
                             <div className="absolute inset-1 rounded-full overflow-hidden opacity-90">
-                              <img
+                              <GameCover
                                 src={inspectingGame.coverUrl}
-                                alt="Disc Art"
+                                title={inspectingGame.title}
+                                accent={inspectingGame.theme?.accentColor}
                                 className="w-full h-full object-cover select-none filter contrast-125"
                               />
                             </div>

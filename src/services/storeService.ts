@@ -48,7 +48,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showNavigationHud: false,
   hasCompletedOnboarding: false,
   experienceArchetype: 'digital',
-  hapticsEnabled: true
+  hapticsEnabled: true,
+  reduceEffects: false,
+  customAccent: undefined,
+  glowIntensity: 70
 };
 
 export const INITIAL_GAMES: Game[] = [];

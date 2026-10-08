@@ -724,26 +724,80 @@ export class ThemeEngine {
   }
 
   // Inject CSS variables into the root DOM
-  public static applyGameTheme(accent: string, glow: string, vibe: GameVibe = 'modern-cinematic') {
+  public static applyGameTheme(
+    accent: string,
+    glow: string,
+    vibe: GameVibe = 'modern-cinematic',
+    options?: { customAccent?: string; glowIntensity?: number }
+  ) {
     const root = document.documentElement;
-    const contrast = this.getContrastColor(accent);
-    root.style.setProperty('--game-accent', accent);
+    const effectiveAccent = options?.customAccent || accent;
+    const intensity = options?.glowIntensity ?? 70;
+    const contrast = this.getContrastColor(effectiveAccent);
+
+    // Compute rgba glow based on intensity
+    let effectiveGlow = glow;
+    const isReduced = root.classList.contains('reduce-effects') || (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+    if (intensity === 0 || isReduced) {
+      effectiveGlow = 'none';
+    } else if (effectiveAccent.startsWith('#')) {
+      const hex = effectiveAccent.replace('#', '');
+      const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16) || 0;
+      const alpha = ((intensity / 100) * 0.65).toFixed(2);
+      effectiveGlow = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    root.style.setProperty('--accent', effectiveAccent);
+    root.style.setProperty('--accent-contrast', contrast);
+    root.style.setProperty('--glow-intensity', isReduced ? '0' : intensity.toString());
+    root.style.setProperty('--accent-glow', effectiveGlow);
+    root.style.setProperty('--effect-glow-opacity', isReduced ? '0' : (intensity / 100).toFixed(2));
+
+    root.style.setProperty('--game-accent', effectiveAccent);
     root.style.setProperty('--game-accent-contrast', contrast);
-    root.style.setProperty('--game-glow', glow);
+    root.style.setProperty('--game-glow', effectiveGlow);
     root.style.setProperty('--game-vibe', vibe);
   }
 
-  public static applyGlobalTheme(theme: GlobalTheme) {
+  public static applyGlobalTheme(
+    theme: GlobalTheme,
+    options?: { customAccent?: string; glowIntensity?: number }
+  ) {
     const root = document.documentElement;
     const t = GLOBAL_THEMES[theme] || GLOBAL_THEMES['8bitdo-mint'];
-    const contrast = this.getContrastColor(t.colors.accent);
-    root.style.setProperty('--global-accent', t.colors.accent);
-    root.style.setProperty('--global-glow', t.colors.glow);
+    const effectiveAccent = options?.customAccent || t.colors.accent;
+    const intensity = options?.glowIntensity ?? 70;
+    const contrast = this.getContrastColor(effectiveAccent);
+    const isReduced = root.classList.contains('reduce-effects') || (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+    let effectiveGlow = t.colors.glow;
+    if (intensity === 0 || isReduced) {
+      effectiveGlow = 'none';
+    } else if (effectiveAccent.startsWith('#')) {
+      const hex = effectiveAccent.replace('#', '');
+      const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16) || 0;
+      const alpha = ((intensity / 100) * 0.65).toFixed(2);
+      effectiveGlow = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    root.style.setProperty('--accent', effectiveAccent);
+    root.style.setProperty('--accent-contrast', contrast);
+    root.style.setProperty('--glow-intensity', isReduced ? '0' : intensity.toString());
+    root.style.setProperty('--accent-glow', effectiveGlow);
+    root.style.setProperty('--effect-glow-opacity', isReduced ? '0' : (intensity / 100).toFixed(2));
+
+    root.style.setProperty('--global-accent', effectiveAccent);
+    root.style.setProperty('--global-glow', effectiveGlow);
     root.style.setProperty('--global-bg-start', t.colors.bgGradStart);
     root.style.setProperty('--global-bg-end', t.colors.bgGradEnd);
-    root.style.setProperty('--game-accent', t.colors.accent);
+    root.style.setProperty('--game-accent', effectiveAccent);
     root.style.setProperty('--game-accent-contrast', contrast);
-    root.style.setProperty('--game-glow', t.colors.glow);
+    root.style.setProperty('--game-glow', effectiveGlow);
     root.style.setProperty('--game-vibe', 'modern-cinematic');
   }
 

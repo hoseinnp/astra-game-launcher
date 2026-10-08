@@ -46,10 +46,12 @@ const GameOverviewModal = lazy(() => import('./components/dashboard/GameOverview
 const RecommendationsHub = lazy(() => import('./components/RecommendationsHub').then(m => ({ default: m.RecommendationsHub })));
 
 function getRecentResumeGame(games: Game[]): Game | null {
-  if (games.length === 0) return null;
-  const sorted = [...games].sort((a, b) => {
-    const aTime = a.stats?.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
-    const bTime = b.stats?.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
+  if (!games || games.length === 0) return null;
+  const validGames = games.filter(Boolean);
+  if (validGames.length === 0) return null;
+  const sorted = [...validGames].sort((a, b) => {
+    const aTime = a?.stats?.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
+    const bTime = b?.stats?.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
     return bTime - aTime;
   });
   const last = sorted[0];
@@ -442,7 +444,10 @@ export const App: React.FC = () => {
       if (loadedProfiles && loadedProfiles.length > 0) {
         setProfiles(loadedProfiles);
       }
-      ThemeEngine.applyGlobalTheme(loadedSettings.globalTheme);
+      ThemeEngine.applyGlobalTheme(loadedSettings.globalTheme, {
+        customAccent: loadedSettings.customAccent,
+        glowIntensity: loadedSettings.glowIntensity
+      });
       ThemeEngine.applyArchetype(loadedSettings.experienceArchetype || 'digital');
       if (loadedGames.length > 0) {
         setSelectedGameIndex((prev) => (prev >= loadedGames.length ? 0 : prev));
@@ -612,24 +617,28 @@ export const App: React.FC = () => {
   useEffect(() => {
     const activeGame = games[selectedGameIndex];
     const globalT = GLOBAL_THEMES[settings.globalTheme] || GLOBAL_THEMES['8bitdo-mint'];
+    const themeOpts = {
+      customAccent: settings.customAccent,
+      glowIntensity: settings.glowIntensity
+    };
 
     // In Grid View, ALWAYS prioritize the global visual theme across the whole library
     if (settings.viewMode === 'grid') {
-      ThemeEngine.applyGlobalTheme(settings.globalTheme);
-      ThemeEngine.applyGameTheme(globalT.colors.accent, globalT.colors.glow);
+      ThemeEngine.applyGlobalTheme(settings.globalTheme, themeOpts);
+      ThemeEngine.applyGameTheme(globalT.colors.accent, globalT.colors.glow, 'modern-cinematic', themeOpts);
       audioEngine.stopBgm();
       return;
     }
 
     // In Console View:
-    ThemeEngine.applyGlobalTheme(settings.globalTheme);
+    ThemeEngine.applyGlobalTheme(settings.globalTheme, themeOpts);
     if (activeGame) {
       const accent = activeGame.theme?.accentColor || globalT.colors.accent;
       const glow = activeGame.theme?.glowColor || globalT.colors.glow;
       const vibe = activeGame.theme?.vibe && activeGame.theme.vibe !== 'auto'
         ? activeGame.theme.vibe
         : ThemeEngine.detectGameVibe(activeGame);
-      ThemeEngine.applyGameTheme(accent, glow, vibe);
+      ThemeEngine.applyGameTheme(accent, glow, vibe, themeOpts);
 
       if (settings.bgmEnabled) {
         audioEngine.playThemeAmbient(vibe, activeGame.audio?.bgmUrl);
@@ -638,11 +647,49 @@ export const App: React.FC = () => {
         audioEngine.stopBgm();
       }
     } else {
-      ThemeEngine.applyGameTheme(globalT.colors.accent, globalT.colors.glow);
+      ThemeEngine.applyGameTheme(globalT.colors.accent, globalT.colors.glow, 'modern-cinematic', themeOpts);
       audioEngine.stopThemeAmbient();
       audioEngine.stopBgm();
     }
-  }, [selectedGameIndex, games, settings.bgmEnabled, settings.globalTheme, settings.viewMode]);
+  }, [
+    selectedGameIndex,
+    games,
+    settings.bgmEnabled,
+    settings.globalTheme,
+    settings.viewMode,
+    settings.customAccent,
+    settings.glowIntensity
+  ]);
+
+  // Reduced Effects: Toggle root class on <html> based on setting or OS prefers-reduced-motion
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const updateClass = () => {
+      const isReduced = Boolean(settings.reduceEffects || mediaQuery.matches);
+      if (isReduced) {
+        root.classList.add('reduce-effects');
+        root.style.setProperty('--accent-glow', 'none');
+        root.style.setProperty('--game-glow', 'none');
+        root.style.setProperty('--global-glow', 'none');
+        root.style.setProperty('--glow-intensity', '0');
+        root.style.setProperty('--effect-glow-opacity', '0');
+      } else {
+        root.classList.remove('reduce-effects');
+        ThemeEngine.applyGlobalTheme(settings.globalTheme, {
+          customAccent: settings.customAccent,
+          glowIntensity: settings.glowIntensity
+        });
+      }
+    };
+
+    updateClass();
+    mediaQuery.addEventListener?.('change', updateClass);
+    return () => {
+      mediaQuery.removeEventListener?.('change', updateClass);
+    };
+  }, [settings.reduceEffects, settings.globalTheme, settings.customAccent, settings.glowIntensity]);
 
   // Listen to game session endings from Electron main process
   useEffect(() => {
@@ -1239,64 +1286,66 @@ export const App: React.FC = () => {
       )}
 
       {/* Main View Area: Console Ribbon, Grid Library, or 3D Physical Shelf */}
-      {settings.viewMode === 'ps5' ? (
-        <ConsoleView
-          games={games}
-          selectedGameIndex={selectedGameIndex}
-          onSelectGame={(idx) => setSelectedGameIndex(idx)}
-          onLaunchGame={handleLaunchGame}
-          onToggleFavorite={handleToggleFavorite}
-          onOpenFolder={handleOpenFolder}
-          onOpenNotes={() => setIsNotesOpen(true)}
-          onOpenOverview={() => setIsIntelDrawerOpen(true)}
-          onOpenThemeEditor={(g) => {
-            setThemeEditingGame(g);
-            setIsThemeModalOpen(true);
-          }}
-          onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
-          onRemoveGame={handleRemoveGame}
-          backgroundBlur={settings.backgroundBlur}
-        />
-      ) : settings.viewMode === 'grid' ? (
-        <GridView
-          games={games}
-          selectedGameIndex={selectedGameIndex}
-          onSelectGame={(idx) => setSelectedGameIndex(idx)}
-          onLaunchGame={handleLaunchGame}
-          onToggleFavorite={handleToggleFavorite}
-          onOpenOverview={(g) => {
-            const idx = games.findIndex((x) => x.id === g.id);
-            if (idx >= 0) setSelectedGameIndex(idx);
-            setIsIntelDrawerOpen(true);
-          }}
-          onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
-          onRemoveGame={handleRemoveGame}
-          initialDensity={gridDensity}
-          onDensityChange={setGridDensity}
-        />
-      ) : (
-        <Suspense fallback={
-          <div className="flex-1 flex items-center justify-center min-h-[400px]">
-            <div className="flex flex-col items-center gap-3 text-white/50 animate-pulse">
-              <div className="w-8 h-8 rounded-full border-2 border-[var(--game-accent)] border-t-transparent animate-spin" />
-              <span className="text-xs font-mono uppercase tracking-widest">Loading 3D Shelf...</span>
-            </div>
-          </div>
-        }>
-          <PhysicalShelfView
+      <div key={settings.viewMode} className="flex-1 flex flex-col min-h-0 relative animate-view-fade">
+        {settings.viewMode === 'ps5' ? (
+          <ConsoleView
             games={games}
             selectedGameIndex={selectedGameIndex}
             onSelectGame={(idx) => setSelectedGameIndex(idx)}
             onLaunchGame={handleLaunchGame}
+            onToggleFavorite={handleToggleFavorite}
+            onOpenFolder={handleOpenFolder}
+            onOpenNotes={() => setIsNotesOpen(true)}
+            onOpenOverview={() => setIsIntelDrawerOpen(true)}
+            onOpenThemeEditor={(g) => {
+              setThemeEditingGame(g);
+              setIsThemeModalOpen(true);
+            }}
+            onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
+            onRemoveGame={handleRemoveGame}
+            backgroundBlur={settings.backgroundBlur}
+          />
+        ) : settings.viewMode === 'grid' ? (
+          <GridView
+            games={games}
+            selectedGameIndex={selectedGameIndex}
+            onSelectGame={(idx) => setSelectedGameIndex(idx)}
+            onLaunchGame={handleLaunchGame}
+            onToggleFavorite={handleToggleFavorite}
             onOpenOverview={(g) => {
               const idx = games.findIndex((x) => x.id === g.id);
               if (idx >= 0) setSelectedGameIndex(idx);
-              setOverviewGame(g);
+              setIsIntelDrawerOpen(true);
             }}
-            onOpenMods={(g) => setModManagingGame(g)}
+            onRequestRemoveGame={(g) => setGamePendingRemoval(g)}
+            onRemoveGame={handleRemoveGame}
+            initialDensity={gridDensity}
+            onDensityChange={setGridDensity}
           />
-        </Suspense>
-      )}
+        ) : (
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center min-h-[400px]">
+              <div className="flex flex-col items-center gap-3 text-white/50 animate-pulse">
+                <div className="w-8 h-8 rounded-full border-2 border-[var(--game-accent)] border-t-transparent animate-spin" />
+                <span className="text-xs font-mono uppercase tracking-widest">Loading 3D Shelf...</span>
+              </div>
+            </div>
+          }>
+            <PhysicalShelfView
+              games={games}
+              selectedGameIndex={selectedGameIndex}
+              onSelectGame={(idx) => setSelectedGameIndex(idx)}
+              onLaunchGame={handleLaunchGame}
+              onOpenOverview={(g) => {
+                const idx = games.findIndex((x) => x.id === g.id);
+                if (idx >= 0) setSelectedGameIndex(idx);
+                setOverviewGame(g);
+              }}
+              onOpenMods={(g) => setModManagingGame(g)}
+            />
+          </Suspense>
+        )}
+      </div>
 
       {/* Navigation HUD: Console Action Bar with Dynamic Platform Glyphs (Optional / Configurable) */}
       {settings.showNavigationHud && (
