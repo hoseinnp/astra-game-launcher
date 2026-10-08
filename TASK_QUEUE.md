@@ -1,26 +1,24 @@
 # TASK_QUEUE
 
-## Current task: Task A - Responsive shell + Reduced Effects switch
-Branch: create `feat/responsive-shell` from `feat/ui-review-fixes` (do not merge anything into main). Push to origin when done.
+## Current task: Task B - Settings redesign + accent glow system + motion pass
+Branch: create `feat/settings-glow-motion` from `feat/responsive-shell` (do not merge anything into main). Push to origin when done.
 
-Goal: the app must look correct and nothing may clip at small window sizes (down to 640x480).
+Goal: make the app feel more visual and flashy (animations, glow) while Settings becomes cleaner and easier to navigate. Everything must stay correct at 640px width and above (Task A's responsive rules must not regress).
 
 Requirements:
-1. Sidebar: below ~900px width collapse to an icon-only rail with tooltips on hover/focus. Below ~640px the rail becomes a slide-in drawer opened by a hamburger button (close on outside click, Esc, or navigation). Every icon-only button must have an `aria-label` and a tooltip.
-2. Game grid / shelf / ps5 views: use auto-fit/minmax columns so cards reflow with no horizontal scroll and no clipped titles or buttons at any width.
-3. Modals, popups, Mini-HUD settings, Smart Resume popup, Activity dashboard tabs: constrain to `max-width: 100vw` / `max-height: 100vh` with internal scrolling; tab bars scroll horizontally instead of overflowing.
-4. Settings page: single-column stacking below ~800px, no overflow.
-5. Reduced Effects: add a single toggle in Settings ("Reduce animations and glow") persisted in localStorage. When on, or when the OS `prefers-reduced-motion` is set, disable animations/transitions and glow/blur effects via a root class (e.g. `html.reduce-effects`). Use CSS variables so Task B can reuse them.
-6. Do not change app logic, IPC, or services. UI/CSS/layout only.
+1. Settings layout: left category rail (icon + label; collapses to icons or a top scroller on narrow widths), search box at the top that filters settings by name/description, and settings grouped into glass cards. Rarely used or duplicate options go inside a collapsible "Advanced" section per category (collapsed by default). Keep every existing setting reachable; do not delete settings or change what they do.
+2. Controls: replace plain checkboxes with animated toggle switches; consistent slider, select and button styles; visible keyboard focus rings; every control labeled.
+3. Accent glow system: define accent color and glow intensity as CSS variables on the root (e.g. `--accent`, `--accent-glow`, `--glow-intensity`). Add to Settings > Appearance: accent color picker with 6 preset swatches plus custom, and a glow intensity slider (0-100) with a live preview card. Persist in localStorage and apply on startup with no flash. Existing glows/borders/active states should use these variables.
+4. Motion pass: staggered fade/slide-in for game cards on view load, hover lift + glow on cards and buttons, smooth cross-fade between views/pages, animated active-indicator on the sidebar, animated tab underline. Use CSS transitions or lightweight CSS animations only (no new heavy dependencies). Keep durations 150-300ms.
+5. Task A integration (mandatory): all new animations, glow and blur MUST be disabled when `html.reduce-effects` is set or `prefers-reduced-motion` is active. Glow intensity 0 must remove glow entirely.
+6. UI/CSS/layout only: do not change app logic, IPC or services. Preference storage uses the existing settings/localStorage pattern.
 
-Verification (all must pass, report results): `npx tsc -b` 0 errors, `npx vite build` succeeds, `npx oxlint` 0 errors on touched files, headless browser check at 1280, 900, 640 and 480px widths for library (grid/shelf/ps5), Settings, one modal: report no horizontal scroll and no clipped elements.
+Verification (all must pass, report results): `npx tsc -b` 0 errors, `npx vite build` succeeds, `npx oxlint` 0 errors on touched files, headless browser check at 1280, 900, 640px: Settings (search filters correctly, Advanced collapses/expands, no horizontal scroll), library view (cards animate in, no clipping), accent change updates glow live, and with reduce-effects ON no animations or glow remain.
 Report format: branch, commit hash, verification results.
-
-## Up next (do NOT execute yet)
-- Task B - Settings redesign + accent glow system + motion pass (details will be added when Task A is done).
 
 ## Skipped (do NOT execute)
 - Task #7: Game Oracle. Skipped, pending owner decision.
 
 ## Completed (for reference)
 - UI polish: cover fallback and layout clipping (feat/ui-review-fixes, f4d693a)
+- Task A: Responsive shell + Reduced Effects switch (feat/responsive-shell)
