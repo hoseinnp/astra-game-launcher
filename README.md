@@ -48,11 +48,18 @@ A modern, high-performance desktop game launcher and companion dashboard built w
 
 ---
 
+## ⬇️ Download
+
+Prebuilt Windows executables are available on the [GitHub Releases](https://github.com/hoseinnp/astra-game-launcher/releases) page:
+- **Portable (.exe)**: Download `Astra Game Launcher-<version>-portable.exe` and run directly without installation.
+
+---
+
 ## 💾 Installation & Development
 
 ### Local Development
 ```bash
-git clone https://github.com/[USERNAME]/astra-game-launcher.git
+git clone https://github.com/hoseinnp/astra-game-launcher.git
 cd astra-game-launcher
 npm install
 
@@ -66,14 +73,17 @@ npm run build
 npm run dist:portable
 ```
 
-### Option 1: Installer
-1. Go to [Releases](https://github.com/[USERNAME]/astra-game-launcher/releases)
-2. Download the latest `Astra Game Launcher-X.X.X.exe`
-3. Run the installer to add Astra to your Program Files.
-
-### Option 2: Portable (No Installation)
-1. Download `Astra Game Launcher-X.X.X-portable.exe`
-2. Run directly from anywhere (USB stick, Downloads, etc.) without registry changes.
+### 🚀 Releasing
+To publish a new automated Windows release:
+1. Bump `"version"` in `package.json` (e.g. `1.0.1`).
+2. Commit the change and push a tag matching the version:
+   ```bash
+   git commit -am "chore: release v1.0.1"
+   git tag v1.0.1
+   git push origin main
+   git push origin v1.0.1
+   ```
+3. GitHub Actions builds the Windows app and attaches `Astra Game Launcher-<version>-portable.exe` to a new release.
 
 ---
 
