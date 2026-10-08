@@ -240,7 +240,7 @@ export const ModManagerModal: React.FC<ModManagerModalProps> = ({
                   Mod & Add-On Pack Manager
                 </h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--game-accent,#2ee5ba)]/20 text-[var(--game-accent,#2ee5ba)] font-mono font-bold">
-                  V3 MODULE
+                  ARMORY MODULE
                 </span>
               </div>
               <p className="text-xs text-white/50 truncate max-w-md">

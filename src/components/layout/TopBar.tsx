@@ -152,7 +152,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
 
           <div
-            title="ASTRA OS 3.0"
+            title={`ASTRA v${__APP_VERSION__}`}
             className="flex items-center gap-2 sm:gap-2.5 group cursor-default"
           >
             <AstraCoreIcon
@@ -164,7 +164,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 ASTRA
               </span>
               <span className="text-[8px] sm:text-[9px] font-mono tracking-widest text-[var(--game-accent)] opacity-85 uppercase -mt-0.5">
-                OS 3.0
+                v{__APP_VERSION__}
               </span>
             </div>
           </div>
@@ -722,17 +722,20 @@ export const TopBar: React.FC<TopBarProps> = ({
                 <span>Settings</span>
               </button>
 
-              <button
-                type="button"
-                aria-label={sfxEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
-                onClick={() => {
-                  onToggleMute();
-                  audioEngine.playSelect();
-                }}
-                className="p-2 rounded-xl glass-pill text-white/80 hover:text-white cursor-pointer"
-              >
-                {sfxEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-400" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-white/40">v{__APP_VERSION__}</span>
+                <button
+                  type="button"
+                  aria-label={sfxEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
+                  onClick={() => {
+                    onToggleMute();
+                    audioEngine.playSelect();
+                  }}
+                  className="p-2 rounded-xl glass-pill text-white/80 hover:text-white cursor-pointer"
+                >
+                  {sfxEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-400" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>

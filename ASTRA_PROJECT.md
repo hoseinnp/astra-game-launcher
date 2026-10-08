@@ -1,6 +1,6 @@
 # Astra Game Launcher
 
-**Version:** 3.0.0  
+**Version:** 1.0.0  
 **Status:** Current Release  
 **GitHub:** https://github.com/[USERNAME]/astra-game-launcher
 

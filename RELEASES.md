@@ -5,20 +5,20 @@
 ### 1. Update Version
 Edit `package.json` and increment the version:
 ```json
-"version": "3.0.1"
+"version": "1.0.1"
 ```
 
 ### 2. Commit Version Bump
 ```bash
 git add package.json
-git commit -m "chore: bump version to 3.0.1"
+git commit -m "chore: bump version to 1.0.1"
 ```
 
 ### 3. Create Git Tag
 ```bash
-git tag v3.0.1
+git tag v1.0.1
 git push origin main
-git push origin v3.0.1
+git push origin v1.0.1
 ```
 
 ### 4. GitHub Actions Takes Over
@@ -31,10 +31,14 @@ git push origin v3.0.1
 
 Tag descriptions should include:
 ```markdown
-## v3.0.1 - 2026-10-06
+## v1.0.0 - 2026-10-09
 
 ### Features
 - Added in-game mini-HUD overlay
+- Added Save Game Vault & Auto-Backup
+- Added Retro Hub & Emulation Center
+- Added Astra Jukebox & Audio Visualizer
+- Added Astra Armory Mod Manager
 
 ### Fixes
 - Fixed audio ducking on game close
@@ -44,19 +48,19 @@ Tag descriptions should include:
 - Updated dependencies to latest versions
 
 ### Downloads
-- Astra Game Launcher-3.0.1.exe (Installer)
-- Astra Game Launcher-3.0.1-portable.exe (Portable)
+- Astra Game Launcher-1.0.0.exe (Installer)
+- Astra Game Launcher-1.0.0-portable.exe (Portable)
 ```
 
 ## Versioning
 
 Uses semantic versioning:
-- **3.0.1** = MAJOR.MINOR.PATCH
+- **1.0.0** = MAJOR.MINOR.PATCH
 - MAJOR: Breaking changes
 - MINOR: New features (backwards compatible)
 - PATCH: Bug fixes
 
 Next releases:
-- v3.1.0 (In-Game Mini-HUD)
-- v3.2.0 (Retro Hub & Emulation)
-- v3.3.0 (Mod Manager)
+- v1.1.0 (In-Game Mini-HUD Enhancements)
+- v1.2.0 (Retro Hub & Emulation Advancements)
+- v1.3.0 (Mod Manager Presets & Cloud Sync)

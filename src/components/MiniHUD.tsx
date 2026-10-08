@@ -129,7 +129,7 @@ export const MiniHUD: React.FC = () => {
       <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5 shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">ASTRA HUD</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">ASTRA HUD v{__APP_VERSION__}</span>
         </div>
 
         {/* Tab Buttons */}

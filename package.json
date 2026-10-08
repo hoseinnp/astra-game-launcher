@@ -1,7 +1,7 @@
 {
   "name": "astra-launcher",
   "private": true,
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "Modern high-performance desktop game launcher and companion dashboard",
   "author": "Astra Launcher Dev <dev@astra-launcher.dev>",
   "type": "module",

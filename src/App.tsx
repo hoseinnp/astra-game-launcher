@@ -643,7 +643,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // V3: Startup Smart Resume pattern detection & Milestone notifications
+  // Startup Smart Resume pattern detection & Milestone notifications
   useEffect(() => {
     // 1. Listen for milestone unlocks
     const unsubMilestone = ActivityTrackingService.onMilestoneUnlocked((milestone) => {
@@ -1587,7 +1587,7 @@ export const App: React.FC = () => {
         />
         </ErrorBoundary>
 
-        {/* V3 Mod & Add-On Pack Manager Modal */}
+        {/* Mod & Add-On Pack Manager Modal */}
         <ErrorBoundary fallbackMessage="Mod Manager encountered an error.">
           <ModManagerModal
           isOpen={modManagingGame !== null}
@@ -1660,7 +1660,7 @@ export const App: React.FC = () => {
         />
         </ErrorBoundary>
 
-        {/* V3 Pillar 1: Astra Jukebox & Audio Visualizer */}
+        {/* Astra Jukebox & Audio Visualizer */}
         <ErrorBoundary fallbackMessage="Jukebox encountered an error.">
           <JukeboxModal
           isOpen={isJukeboxOpen}
@@ -1670,7 +1670,7 @@ export const App: React.FC = () => {
         />
         </ErrorBoundary>
 
-        {/* V3 Pillar 2: Save Game Vault & Auto-Backup */}
+        {/* Save Game Vault & Auto-Backup */}
         <ErrorBoundary fallbackMessage="Save Vault encountered an error.">
           <SaveVaultModal
           isOpen={saveVaultGame !== null}
@@ -1680,7 +1680,7 @@ export const App: React.FC = () => {
         />
         </ErrorBoundary>
 
-        {/* V3 Pillar 3: Gaming Activity Tracking & Analytics Dashboard */}
+        {/* Gaming Activity Tracking & Analytics Dashboard */}
         <ErrorBoundary fallbackMessage="Activity Dashboard encountered an error.">
           <ActivityDashboardModal
           isOpen={isActivityOpen}
@@ -1702,7 +1702,7 @@ export const App: React.FC = () => {
           </ErrorBoundary>
         )}
 
-        {/* V3 Pillar 4: Retro & Emulation Hub */}
+        {/* Retro & Emulation Hub */}
         <ErrorBoundary fallbackMessage="Retro Hub encountered an error.">
           <RetroHub
           isOpen={isRetroHubOpen}
@@ -1711,7 +1711,7 @@ export const App: React.FC = () => {
         />
         </ErrorBoundary>
 
-        {/* V3 Pillar 5: In-Game Companion Mini-HUD */}
+        {/* In-Game Companion Mini-HUD */}
         <ErrorBoundary fallbackMessage="Mini-HUD encountered an error.">
           <InGameMiniHud
           isOpen={isMiniHudOpen}
