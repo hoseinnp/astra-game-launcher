@@ -116,6 +116,51 @@ class GameLauncherServiceClass {
   }
 
   /**
+   * Launch a retro ROM using a specific emulator executable
+   */
+  public async launchRetroRom(
+    rom: { id: string; title: string; romPath: string; system: string },
+    emulator: { id: string; name: string; executablePath: string; defaultArgs?: string }
+  ): Promise<LaunchGameResult> {
+    const retroGameId = `retro_${rom.id}`;
+    const gameTitle = `${rom.title} [${rom.system.toUpperCase()}]`;
+
+    // 1. Log in ActivityTrackingService
+    ActivityTrackingService.logLaunch(retroGameId, gameTitle);
+
+    // 2. Duck volume
+    AudioService.duckVolume();
+
+    // 3. Launch via IPC
+    if (typeof window !== 'undefined' && window.api?.launchRetroGame) {
+      try {
+        const res = await window.api.launchRetroGame({
+          emulatorPath: emulator.executablePath,
+          romPath: rom.romPath,
+          args: emulator.defaultArgs || '',
+          gameTitle
+        });
+
+        if (res.success) {
+          this.activeGameSessions.add(retroGameId);
+          this.setupSessionEndListener();
+          return { success: true, pid: res.pid };
+        } else {
+          AudioService.restoreVolume();
+          return { success: false, error: res.error || 'Failed to start emulator' };
+        }
+      } catch (err: any) {
+        AudioService.restoreVolume();
+        return { success: false, error: err?.message || 'Error launching retro game' };
+      }
+    }
+
+    // Web simulation
+    this.activeGameSessions.add(retroGameId);
+    return { success: true, mode: 'web-simulation' };
+  }
+
+  /**
    * Manually check if any game is currently running
    */
   public hasRunningGames(): boolean {

@@ -421,8 +421,15 @@ export interface ElectronAPI {
   getActivityLog?: () => Promise<GamingSession[]>;
   recordActivitySession?: (session: GamingSession) => Promise<{ success: boolean }>;
   // Retro Emulation Hub APIs
-  detectEmulators?: () => Promise<EmulatorConfig[]>;
-  scanRoms?: (folderPath: string) => Promise<RomScanItem[]>;
+  detectEmulators?: () => Promise<any[]>;
+  scanRoms?: (folderPaths: string | string[]) => Promise<any[]>;
+  launchRetroGame?: (params: { emulatorPath: string; romPath: string; args?: string; gameTitle?: string }) => Promise<{ success: boolean; pid?: number; gameId?: string; error?: string }>;
+  listSaveStates?: (romPath: string) => Promise<any[]>;
+  backupSaveState?: (params: { statePath: string; backupFolder?: string }) => Promise<{ success: boolean; backupPath?: string; error?: string }>;
+  restoreSaveState?: (params: { backupPath: string; targetStatePath: string }) => Promise<{ success: boolean; error?: string }>;
+  pickRetroFolder?: () => Promise<string | null>;
+  pickEmulatorExe?: () => Promise<string | null>;
+  onRetroScanProgress?: (callback: (progress: { scannedFiles: number; foundRoms: number; currentFolder?: string }) => void) => () => void;
   // System Performance APIs
   getSystemPerformance?: () => Promise<SystemPerformanceStats>;
   // In-Game Mini-HUD APIs

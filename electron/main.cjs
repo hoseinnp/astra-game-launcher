@@ -7,6 +7,7 @@ const net = require('net');
 const { registerSaveVaultIpc } = require('./ipc/SaveVaultIpc.cjs');
 const { registerMiniHUDIpc } = require('./ipc/MiniHUDIpc.cjs');
 const { showHUDWindow, hideHUDWindow, registerHUDGlobalShortcuts } = require('./windows/HUDWindow.cjs');
+const { registerRetroIpc } = require('./ipc/RetroIpc.cjs');
 
 let mainWindow = null;
 const runningGames = new Map();
@@ -204,6 +205,9 @@ app.whenReady().then(() => {
   // Register Mini-HUD IPC and global shortcuts
   registerMiniHUDIpc(app, mainWindow, runningGames);
   registerHUDGlobalShortcuts(app, mainWindow);
+
+  // Register Retro Hub IPC
+  registerRetroIpc(ipcMain, app, mainWindow, runningGames);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
