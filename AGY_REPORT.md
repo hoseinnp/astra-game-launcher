@@ -1,26 +1,24 @@
-# Task G Report: Fix Jukebox Audio Overlap & Stop Control
+# Task H Final Report: Version Sync with Release (v1.0.0)
 
-**Root Cause**:
-Two independent competing audio singletons existed (`AudioService` and `jukeboxEngine`). `JukeboxModal` played via `AudioService` while `TopBar` and `InGameMiniHud` queried `jukeboxEngine`, leaving background playback un-stoppable from the HUD and allowing a second audio stream to play on top. In addition, `selectTrack` in `JukeboxModal` called `selectTrackByIndex` (which auto-played) and then immediately called `play()` again, and audio elements/oscillators lacked full teardown on stop.
+## Problem & Root Cause
+The packaged application and project were displaying outdated or mismatched version strings (e.g., "ASTRA OS 3.0", "V3 MODULE", "V3 HUB", and `3.0.0` in package configurations) instead of a unified single source of truth aligned with the current v1.0.0 release.
 
-**Key Changes**:
-- `src/services/AudioService.ts`: Hardened singleton managing exactly one playback instance. Robust `stop()` and `pause()` that disconnect/clear oscillators, pause `audioElement`, reset `currentTime = 0`, clear src, stop ambient layers, and clear timers. Added play session tracking to prevent race conditions and attached `beforeunload`/`unload` teardown.
-- `src/services/jukeboxEngine.ts`: Converted into a facade mapping directly to `AudioService` so all consumers control the identical singleton state.
-- `src/modals/JukeboxModal.tsx`: Fixed double-play on track selection (`playTrack`), added a dedicated Stop button, and resynced audio state on open.
-- `src/components/layout/TopBar.tsx`: Added persistent inline stop button on the TopBar Jukebox pill and in the mobile drawer when audio is playing.
-- `src/components/hud/InGameMiniHud.tsx`: Added dedicated stop button to the Jukebox tab.
-- `src/App.tsx`: Registered `beforeunload`/`unload` handler stopping ambient and Jukebox audio.
-- `src/types/Audio.types.ts`: Extended `Track` type for backward compatibility.
+## Changes Applied
+- **Single Source of Truth**: Updated `package.json` and root `package-lock.json` version fields to `"1.0.0"`.
+- **Dynamic Vite Version Injection**: Configured Vite `define` to inject `__APP_VERSION__` from `package.json` into the renderer; added type declaration in `src/env.d.ts`.
+- **UI Components**:
+  - `TopBar.tsx`: Dynamic version tag `v{__APP_VERSION__}` in desktop branding and mobile drawer footer.
+  - `SettingsModal.tsx`: Added version indicator `v{__APP_VERSION__}` in the header and about footer rail.
+  - `MiniHUD.tsx`: Dynamic `v{__APP_VERSION__}` in the HUD header.
+  - `ModManagerModal.tsx` & `RetroHubModal.tsx`: Cleaned badges to `ARMORY MODULE` and `RETRO HUB`.
+- **Audio & State Backward Compatibility**: `AudioService.ts` migrated playlist storage to `astra_jukebox_playlist` with fallback to `astra_jukebox_playlist_v3`.
+- **Packaging & Config**: Verified `electron-builder.json` dynamic artifact naming `${productName}-${version}-portable.exe`. Preserved `appId` (`com.astra.launcher`) to protect user data.
+- **Documentation**: Updated `ASTRA_PROJECT.md`, `RELEASES.md`, `ROADMAP.md`, and code comments to v1.0.0.
 
-**Merge Status**:
-- Merged `fix/jukebox-stop` into `main` (`--no-ff`). Main commit: `ea3432d3e6062ff69ed0aee28c280b17f6d9ac8a`. Both branches pushed.
-
-**Verification Results**:
-- `npx tsc -b`: PASS (0 errors)
-- `npx vite build`: PASS (built cleanly in 1.14s)
-- `npx oxlint` (touched files): PASS (0 warnings, 0 errors across 7 files)
-- Headless browser test: PASS (Track switch tears down previous track; single active instance; pause and stop reset state; TopBar/HUD/modal controls synchronized; 0 leaked audio elements).
-
-**Behaviors NOT Verifiable Headlessly**:
-- OS-level audio device output fidelity and DAC switching during active Web Audio playback.
-- Hardware controller button feel during live background audio playback.
+## Verification
+- `npx tsc -b`: 0 errors.
+- `npx vite build`: Clean build (0 errors).
+- `npx oxlint`: 0 warnings, 0 errors across 8 touched files.
+- **Headless Browser Verification**: Tested built renderer via Puppeteer. Confirmed `v1.0.0` rendered in TopBar and no stale `v3`/`V3`/`3.0`/`Astra 3` strings in DOM.
+- **Packaged Executable Verification**: Built via `npx electron-builder --dir`. Verified `Astra Game Launcher.exe` has `ProductVersion: 1.0.0.0` and `FileVersion: 1.0.0`.
+- **Branch & Merge**: Merged `fix/version-sync` into `main` with `--no-ff` and pushed both branches.
