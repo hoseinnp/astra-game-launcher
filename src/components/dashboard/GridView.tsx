@@ -75,13 +75,13 @@ export const GridView: React.FC<GridViewProps> = ({
         if (activeFilter === 'completed') return g.collection === 'completed';
         if (activeFilter === 'standalone') return g.type === 'standalone';
         if (activeFilter === 'steam') return g.type === 'steam';
-        return g.genres.includes(activeFilter);
+        return g.genres?.includes(activeFilter) ?? false;
       })
       .sort((a, b) => {
         if (sortBy === 'title') return a.title.localeCompare(b.title);
-        if (sortBy === 'playtime') return b.stats.playtimeMinutes - a.stats.playtimeMinutes;
-        const aDate = a.stats.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
-        const bDate = b.stats.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
+        if (sortBy === 'playtime') return (b.stats?.playtimeMinutes ?? 0) - (a.stats?.playtimeMinutes ?? 0);
+        const aDate = a.stats?.lastPlayed ? new Date(a.stats.lastPlayed).getTime() : 0;
+        const bDate = b.stats?.lastPlayed ? new Date(b.stats.lastPlayed).getTime() : 0;
         return bDate - aDate;
       });
   }, [games, activeFilter, searchQuery, sortBy]);
@@ -439,10 +439,10 @@ export const GridView: React.FC<GridViewProps> = ({
                     <div className="text-right hidden sm:block">
                       <div className="text-xs font-semibold text-white flex items-center gap-1 justify-end">
                         <Clock className="w-3 h-3 text-[var(--game-accent)]" />
-                        <span>{formatPlaytime(game.stats.playtimeMinutes)}</span>
+                        <span>{formatPlaytime(game.stats?.playtimeMinutes ?? 0)}</span>
                       </div>
                       <div className="text-[10px] text-white/40">
-                        {game.stats.lastPlayed ? new Date(game.stats.lastPlayed).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Never'}
+                        {game.stats?.lastPlayed ? new Date(game.stats.lastPlayed).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Never'}
                       </div>
                     </div>
 
@@ -471,13 +471,14 @@ export const GridView: React.FC<GridViewProps> = ({
                 : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]'
             }`}
           >
-            {filteredGames.map((game) => {
+            {filteredGames.map((game, idx) => {
               const originalIndex = gameIndexMap.get(game.id) ?? 0;
               const isSelected = originalIndex === selectedGameIndex;
               const itemVibe = ThemeEngine.getVibeConfig(game.theme?.vibe, game);
               const cardImage = density === 'banner'
                 ? (game.backdropUrl || game.coverUrl)
                 : game.coverUrl;
+              const staggerDelay = `${Math.min(idx * 35, 450)}ms`;
 
               return (
                 /* 2-LAYER CARD ARCHITECTURE FOR UNCLIPPED GLOW */
@@ -492,15 +493,16 @@ export const GridView: React.FC<GridViewProps> = ({
                     onSelectGame(originalIndex);
                   }}
                   style={{
+                    animationDelay: staggerDelay,
                     filter: isSelected
                       ? itemVibe.id === 'retro-arcade'
                         ? 'drop-shadow(6px 6px 0px #000) drop-shadow(0 0 20px var(--game-glow))'
                         : itemVibe.id === 'anime-stylized'
                         ? 'drop-shadow(8px 8px 0px rgba(0,0,0,0.85)) drop-shadow(0 0 25px var(--game-glow))'
-                        : 'drop-shadow(0 16px 18px rgba(0,0,0,0.75))'
+                        : 'drop-shadow(0 16px 18px rgba(0,0,0,0.75)) drop-shadow(0 0 16px var(--accent-glow))'
                       : undefined
                   }}
-                  className={`group relative cursor-pointer flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform hover:-translate-y-2 ${
+                  className={`group relative cursor-pointer flex flex-col transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform hover:-translate-y-2 hover:drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] animate-card-stagger ${
                     isSelected ? 'scale-105 z-20' : 'z-10'
                   }`}
                 >
@@ -646,7 +648,7 @@ export const GridView: React.FC<GridViewProps> = ({
                             <span>{game.achievements.filter((a) => a.unlocked).length}/{game.achievements.length}</span>
                           </span>
                         ) : (
-                          <span className="truncate">{game.genres[0] || 'Game'}</span>
+                          <span className="truncate">{game.genres?.[0] || 'Game'}</span>
                         )}
                       </div>
                     </div>

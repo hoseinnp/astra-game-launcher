@@ -29,14 +29,14 @@ export const UNIVERSAL_MILESTONES: MilestoneDef[] = [
     title: 'Dedicated Player',
     description: 'Logged over 10 hours of playtime.',
     type: 'silver',
-    check: (g) => g.stats.playtimeMinutes >= 600
+    check: (g) => Boolean(g.stats?.playtimeMinutes && g.stats.playtimeMinutes >= 600)
   },
   {
     id: 'milestone-mastery',
     title: 'Mastery',
     description: 'Logged over 50 hours of deep mastery.',
     type: 'gold',
-    check: (g) => g.stats.playtimeMinutes >= 3000
+    check: (g) => Boolean(g.stats?.playtimeMinutes && g.stats.playtimeMinutes >= 3000)
   },
   {
     id: 'milestone-fan-favorite',
@@ -58,7 +58,7 @@ export const UNIVERSAL_MILESTONES: MilestoneDef[] = [
     description: 'Enjoyed a gaming session on the weekend.',
     type: 'silver',
     check: (g) => {
-      if (!g.stats.lastPlayed) return false;
+      if (!g.stats?.lastPlayed) return false;
       const day = new Date(g.stats.lastPlayed).getDay();
       return day === 0 || day === 6;
     }
@@ -69,7 +69,7 @@ export const UNIVERSAL_MILESTONES: MilestoneDef[] = [
     description: 'Played between midnight and 5:00 AM.',
     type: 'silver',
     check: (g) => {
-      if (!g.stats.lastPlayed) return false;
+      if (!g.stats?.lastPlayed) return false;
       const hour = new Date(g.stats.lastPlayed).getHours();
       return hour >= 0 && hour < 5;
     }
