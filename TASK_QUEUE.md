@@ -20,6 +20,9 @@ Finish: if everything is green, merge `feat/controller-support` into `main` with
 
 Report only: merge hash, files added/changed (names), behaviors verified, behaviors NOT verified headlessly (so the owner can test with a real controller), verification results.
 
+## Report file (mandatory, every task)
+After finishing, write your final report to `AGY_REPORT.md` in the repo root (overwrite it each task; max 40 lines; same content as the Report format above, plus the model you ran on if you know it). Commit ONLY that file on `main` with message `docs: agy report` and `git push origin main` (normal push, no force). Do not touch TASK_QUEUE.md. If the task failed or you aborted, still write the report explaining why.
+
 ## Skipped (do NOT execute)
 - Task #7: Game Oracle. Skipped, pending owner decision.
 
