@@ -1,8 +1,8 @@
 # ASTRA Launcher — Evolution Roadmap
 
-## 🚀 Version 3.0 Backlog (Locked In)
+## 🚀 Version 1.0 Release Features (Delivered)
 
-These features have been selected and queued for the **v3.0 major release**:
+These features have been implemented and shipped for the **v1.0.0 release**:
 
 1. **🛡️ Save Game Vault & Auto-Backup**
    - Automatic detection of save folders across `%APPDATA%`, `Documents/My Games`, and `Saved Games`.

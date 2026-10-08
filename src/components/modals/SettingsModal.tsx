@@ -499,7 +499,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">Launcher Preferences</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">Launcher Preferences</h2>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-semibold border border-white/10">
+                  v{__APP_VERSION__}
+                </span>
+              </div>
               <p className="text-[10px] text-white/50 hidden sm:block">Personalize visuals, performance, audio & system services</p>
             </div>
           </div>
@@ -571,6 +576,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               );
             })}
+            <div className="hidden sm:flex mt-auto pt-4 border-t border-white/5 px-2 flex-col gap-0.5 text-[10px] text-white/40">
+              <span className="font-semibold text-white/60">Astra Game Launcher</span>
+              <span className="font-mono">v{__APP_VERSION__}</span>
+            </div>
           </nav>
 
           {/* Main Content Area */}

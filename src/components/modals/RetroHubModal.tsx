@@ -139,7 +139,7 @@ export const RetroHubModal: React.FC<RetroHubModalProps> = ({
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-black text-white tracking-wider uppercase truncate">Retro & Emulation Hub</h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
-                  V3 HUB
+                  RETRO HUB
                 </span>
               </div>
               <p className="text-xs text-white/50 truncate">ROM Directory Scanner, Standalone Emulators & Auto-Arguments</p>

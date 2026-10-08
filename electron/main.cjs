@@ -2219,7 +2219,7 @@ ipcMain.handle('dialog:pick-screenshot', async () => {
 });
 
 // =========================================================================
-// ASTRA V3: SAVE GAME VAULT & AUTO-BACKUP ENGINE
+// SAVE GAME VAULT & AUTO-BACKUP ENGINE
 // =========================================================================
 function copyDirRecursiveSync(src, dest) {
   if (!fs.existsSync(src)) return 0;
@@ -2350,7 +2350,7 @@ function getVaultDir(gameId) {
 registerSaveVaultIpc(ipcMain, app);
 
 // =========================================================================
-// ASTRA V3: GAMING ACTIVITY HISTORY & PLAYTIME LOG
+// GAMING ACTIVITY HISTORY & PLAYTIME LOG
 // =========================================================================
 function getSessionsFilePath() {
   return path.join(app.getPath('userData'), 'sessions.json');
@@ -2430,7 +2430,7 @@ ipcMain.handle('activity:record-session', async (_event, session) => {
 });
 
 // =========================================================================
-// ASTRA V3: RETRO EMULATION & ROM SCANNER
+// RETRO EMULATION & ROM SCANNER
 // =========================================================================
 ipcMain.handle('emulator:detect-installed', async () => {
   const home = os.homedir();
@@ -2589,7 +2589,7 @@ ipcMain.handle('emulator:scan-roms', async (_event, folderPath) => {
 });
 
 // =========================================================================
-// ASTRA V3: SYSTEM PERFORMANCE MONITORING
+// SYSTEM PERFORMANCE MONITORING
 // =========================================================================
 let lastCpuSnapshot = { idle: 0, total: 0 };
 

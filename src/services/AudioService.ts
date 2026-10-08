@@ -1,7 +1,8 @@
 import type { Track, Playlist, VisualizerConfig } from '../types/Audio.types';
 import type { JukeboxTrack, VisualizerMode, AmbientLoFiLayer } from '../types/game';
 
-const PLAYLIST_STORAGE_KEY = 'astra_jukebox_playlist_v3';
+const PLAYLIST_STORAGE_KEY = 'astra_jukebox_playlist';
+const LEGACY_PLAYLIST_STORAGE_KEY = 'astra_jukebox_playlist_v3';
 const DEFAULT_CONFIG: VisualizerConfig = {
   barCount: 64,
   smoothing: 0.8,
@@ -186,7 +187,10 @@ class AudioServiceClass {
 
   private loadPersistedPlaylist() {
     try {
-      const stored = localStorage.getItem(PLAYLIST_STORAGE_KEY);
+      let stored = localStorage.getItem(PLAYLIST_STORAGE_KEY);
+      if (!stored) {
+        stored = localStorage.getItem(LEGACY_PLAYLIST_STORAGE_KEY);
+      }
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && Array.isArray(parsed.tracks) && parsed.tracks.length > 0) {
