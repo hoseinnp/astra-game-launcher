@@ -383,7 +383,11 @@ export const GridView: React.FC<GridViewProps> = ({
                     if (el) cardRefs.current.set(game.id, el);
                     else cardRefs.current.delete(game.id);
                   }}
-                  onClick={() => {
+                  tabIndex={0}
+                    data-gp-focusable="true"
+                    data-gp-context="true"
+                    onFocus={() => { if (originalIndex !== selectedGameIndex) onSelectGame(originalIndex); }}
+                    onClick={() => {
                     audioEngine.playHover();
                     onSelectGame(originalIndex);
                   }}
@@ -488,7 +492,11 @@ export const GridView: React.FC<GridViewProps> = ({
                     if (el) cardRefs.current.set(game.id, el);
                     else cardRefs.current.delete(game.id);
                   }}
-                  onClick={() => {
+                  tabIndex={0}
+                    data-gp-focusable="true"
+                    data-gp-context="true"
+                    onFocus={() => { if (originalIndex !== selectedGameIndex) onSelectGame(originalIndex); }}
+                    onClick={() => {
                     audioEngine.playHover();
                     onSelectGame(originalIndex);
                   }}

@@ -705,7 +705,11 @@ export const PhysicalShelfView: React.FC<PhysicalShelfViewProps> = ({
                 return (
                   <div
                     key={game.id}
-                    onMouseEnter={() => {
+                    tabIndex={0}
+                      data-gp-focusable="true"
+                      data-gp-context="true"
+                      onFocus={() => { if (!isSelected) { const idx = games.findIndex(g => g.id === game.id); if (idx >= 0) onSelectGame(idx); } }}
+                      onMouseEnter={() => {
                       if (!isHovered) {
                         audioEngine.playShelfSlide();
                         setHoveredGameId(game.id);

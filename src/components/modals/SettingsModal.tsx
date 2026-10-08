@@ -4,6 +4,7 @@ import {
   Volume2,
   Palette,
   Monitor,
+  Gamepad2,
   Database,
   ExternalLink,
   Sparkles,
@@ -946,7 +947,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ============================================================== */}
             {(activeCategory === 'system' || (filterMatches && (filterMatches.startup || filterMatches.boot || filterMatches.hud || filterMatches.fullscreen || filterMatches.liveWallpaper))) && (
               <div className="space-y-6 animate-fadeIn">
-                {/* 1. Display Mode & Full Screen */}
+                
+                  {/* Controller & Gamepad Navigation */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col gap-4 hover:border-white/20 transition-all">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-white">
+                          <Gamepad2 className="w-4 h-4 text-[var(--accent,#2ee5ba)]" />
+                          <span>Controller Support</span>
+                        </div>
+                        <div className="text-[10px] text-white/40 mt-0.5">Enable direct spatial navigation via gamepad</div>
+                      </div>
+                      <ToggleSwitch
+                        checked={settings.controllerSupport !== false}
+                        onChange={(checked) => onUpdateSettings({ ...settings, controllerSupport: checked })}
+                        label="Controller Support"
+                      />
+                    </div>
+                    {settings.controllerSupport !== false && (
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4">
+                        <div className="w-1/2">
+                          <h4 className="text-[11px] font-bold text-white">Analog Stick Deadzone</h4>
+                          <p className="text-[9px] text-white/40 mt-0.5">Increase to prevent stick drift registering as input</p>
+                        </div>
+                        <div className="flex items-center gap-3 flex-1 justify-end">
+                          <span className="text-[10px] text-white/40 font-mono w-6 text-right">
+                            {Math.round((settings.gamepadDeadzone ?? 0.4) * 100)}%
+                          </span>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="0.9"
+                            step="0.05"
+                            value={settings.gamepadDeadzone ?? 0.4}
+                            onChange={(e) => onUpdateSettings({ ...settings, gamepadDeadzone: parseFloat(e.target.value) })}
+                            className="w-32 accent-[var(--accent,#2ee5ba)]"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 1. Display Mode & Full Screen */}
                 {(!filterMatches || filterMatches.fullscreen) && (
                   <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between gap-4 hover:border-white/20 transition-all">
                     <div>
