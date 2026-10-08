@@ -300,31 +300,48 @@ export const TopBar: React.FC<TopBarProps> = ({
 
             {/* Astra Jukebox Mini-Player */}
             {onOpenJukebox && (
-              <button
-                type="button"
-                onClick={() => {
-                  audioEngine.playSelect();
-                  onOpenJukebox();
-                }}
-                aria-label={jukeboxPlaying ? `Playing: ${currentTrackTitle} (J)` : 'Astra Jukebox and Audio Visualizer (J)'}
-                title={jukeboxPlaying ? `Playing: ${currentTrackTitle} (J)` : 'Astra Jukebox & Audio Visualizer (J)'}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full transition-all cursor-pointer ${
-                  jukeboxPlaying
-                    ? 'bg-[var(--game-accent,#2ee5ba)]/20 text-white border border-[var(--game-accent,#2ee5ba)] shadow-[0_0_12px_var(--game-glow)]'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {jukeboxPlaying ? (
-                  <Activity className="w-3.5 h-3.5 text-[var(--game-accent,#2ee5ba)] animate-pulse" />
-                ) : (
-                  <Music className="w-4 h-4" />
-                )}
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    audioEngine.playSelect();
+                    onOpenJukebox();
+                  }}
+                  aria-label={jukeboxPlaying ? `Playing: ${currentTrackTitle} (J)` : 'Astra Jukebox and Audio Visualizer (J)'}
+                  title={jukeboxPlaying ? `Playing: ${currentTrackTitle} (J)` : 'Astra Jukebox & Audio Visualizer (J)'}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 transition-all cursor-pointer ${
+                    jukeboxPlaying
+                      ? 'bg-[var(--game-accent,#2ee5ba)]/20 text-white border-y border-l border-[var(--game-accent,#2ee5ba)] rounded-l-full shadow-[0_0_12px_var(--game-glow)]'
+                      : 'rounded-full text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {jukeboxPlaying ? (
+                    <Activity className="w-3.5 h-3.5 text-[var(--game-accent,#2ee5ba)] animate-pulse" />
+                  ) : (
+                    <Music className="w-4 h-4" />
+                  )}
+                  {jukeboxPlaying && (
+                    <span className="hidden xl:inline text-[11px] font-mono font-bold max-w-[90px] truncate text-[var(--game-accent,#2ee5ba)]">
+                      {currentTrackTitle}
+                    </span>
+                  )}
+                </button>
                 {jukeboxPlaying && (
-                  <span className="hidden xl:inline text-[11px] font-mono font-bold max-w-[90px] truncate text-[var(--game-accent,#2ee5ba)]">
-                    {currentTrackTitle}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      audioEngine.playSelect();
+                      jukeboxEngine.stop();
+                    }}
+                    aria-label="Stop Jukebox Audio"
+                    title="Stop Jukebox Audio"
+                    className="flex items-center justify-center p-1.5 pr-2 bg-[var(--game-accent,#2ee5ba)]/20 text-white/80 hover:text-white border-y border-r border-[var(--game-accent,#2ee5ba)] rounded-r-full hover:bg-[var(--game-accent,#2ee5ba)]/30 transition-all cursor-pointer"
+                  >
+                    <Square className="w-3 h-3 fill-current text-[var(--game-accent,#2ee5ba)]" />
+                  </button>
                 )}
-              </button>
+              </div>
             )}
 
             {/* Gaming Activity Heatmap */}
@@ -608,19 +625,35 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </button>
 
                 {onOpenJukebox && (
-                  <button
-                    type="button"
-                    aria-label="Astra Jukebox"
-                    onClick={() => {
-                      setIsDrawerOpen(false);
-                      audioEngine.playSelect();
-                      onOpenJukebox();
-                    }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white text-xs cursor-pointer"
-                  >
-                    <Music className="w-4 h-4 text-[var(--game-accent)]" />
-                    <span>Astra Jukebox {jukeboxPlaying ? '• Playing' : ''}</span>
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label="Astra Jukebox"
+                      onClick={() => {
+                        setIsDrawerOpen(false);
+                        audioEngine.playSelect();
+                        onOpenJukebox();
+                      }}
+                      className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white text-xs cursor-pointer"
+                    >
+                      <Music className="w-4 h-4 text-[var(--game-accent)]" />
+                      <span>Astra Jukebox {jukeboxPlaying ? '• Playing' : ''}</span>
+                    </button>
+                    {jukeboxPlaying && (
+                      <button
+                        type="button"
+                        aria-label="Stop Jukebox"
+                        onClick={() => {
+                          audioEngine.playSelect();
+                          jukeboxEngine.stop();
+                        }}
+                        className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs cursor-pointer"
+                        title="Stop audio"
+                      >
+                        <Square className="w-3.5 h-3.5 text-[var(--game-accent)]" />
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {onOpenActivity && (

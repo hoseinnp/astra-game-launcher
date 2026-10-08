@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Play,
   Pause,
+  Square,
   SkipForward,
   SkipBack,
   Volume2,
@@ -34,7 +35,7 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
   gameThemeColor,
   onShowToast
 }) => {
-  const [audioState, setAudioState] = useState<AudioServiceState>(AudioService.getState());
+  const [audioState, setAudioState] = useState<AudioServiceState>(() => AudioService.getState());
   const [searchQuery, setSearchQuery] = useState('');
   const [visualizerMode, setVisualizerMode] = useState<VisualizerDisplayMode>('bars');
   const [newTrackTitle, setNewTrackTitle] = useState('');
@@ -321,6 +322,17 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
 
             <button
               onClick={() => {
+                audioEngine.playSelect();
+                AudioService.stop();
+              }}
+              className="p-2.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+              title="Stop Audio"
+            >
+              <Square className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => {
                 audioEngine.playHover();
                 AudioService.next();
               }}
@@ -438,8 +450,7 @@ export const JukeboxModal: React.FC<JukeboxModalProps> = ({
                     key={track.id}
                     onClick={() => {
                       audioEngine.playSelect();
-                      AudioService.selectTrack(track);
-                      AudioService.play();
+                      AudioService.playTrack(track.id);
                     }}
                     className={`group px-4 py-2.5 rounded-2xl flex items-center justify-between gap-4 transition-all cursor-pointer ${
                       isCurrent
