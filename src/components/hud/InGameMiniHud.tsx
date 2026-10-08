@@ -276,18 +276,28 @@ export const InGameMiniHud: React.FC<InGameMiniHudProps> = ({
               <button
                 onClick={() => jukeboxEngine.prevTrack()}
                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white"
+                title="Previous Track"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => jukeboxEngine.togglePlay()}
                 className="p-2 rounded-xl bg-[var(--game-accent,#2ee5ba)] text-black font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                title={jukeboxState.isPlaying ? 'Pause' : 'Play'}
               >
                 {jukeboxState.isPlaying ? <Pause className="w-4 h-4 fill-black" /> : <Play className="w-4 h-4 fill-black ml-0.5" />}
               </button>
               <button
+                onClick={() => jukeboxEngine.stop()}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white"
+                title="Stop Audio"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+              </button>
+              <button
                 onClick={() => jukeboxEngine.nextTrack()}
                 className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white"
+                title="Next Track"
               >
                 <SkipForward className="w-3.5 h-3.5 fill-current" />
               </button>

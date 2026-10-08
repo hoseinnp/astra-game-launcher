@@ -628,6 +628,21 @@ export const App: React.FC = () => {
     cacheSteamCdnMedia();
   }, [games.length]);
 
+  // Ensure all audio stops and releases resources on window unload / app close
+  useEffect(() => {
+    const handleUnload = () => {
+      audioEngine.stopThemeAmbient();
+      audioEngine.stopBgm();
+      jukeboxEngine.stop();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('unload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, []);
+
   // V3: Startup Smart Resume pattern detection & Milestone notifications
   useEffect(() => {
     // 1. Listen for milestone unlocks

@@ -3,11 +3,14 @@ export interface Track {
   title: string;
   gameId: string;
   filePath?: string;
+  url?: string;
   duration: number;
+  durationSeconds?: number;
   artist?: string;
   album?: string;
   coverUrl?: string;
   source?: 'curated' | 'local' | 'synthesizer' | 'radio';
+  vibe?: string;
 }
 
 export interface Playlist {

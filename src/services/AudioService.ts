@@ -1,4 +1,5 @@
 import type { Track, Playlist, VisualizerConfig } from '../types/Audio.types';
+import type { JukeboxTrack, VisualizerMode, AmbientLoFiLayer } from '../types/game';
 
 const PLAYLIST_STORAGE_KEY = 'astra_jukebox_playlist_v3';
 const DEFAULT_CONFIG: VisualizerConfig = {
@@ -9,7 +10,7 @@ const DEFAULT_CONFIG: VisualizerConfig = {
   fftSize: 512
 };
 
-const DEFAULT_TRACKS: Track[] = [
+export const DEFAULT_TRACKS: Track[] = [
   {
     id: 'cyber-pulse',
     title: 'Night City Cyber Pulse',
@@ -17,8 +18,11 @@ const DEFAULT_TRACKS: Track[] = [
     artist: 'Astra Sound Labs',
     album: 'Neon Horizon OST',
     duration: 184,
+    durationSeconds: 184,
     source: 'synthesizer',
     filePath: 'synth:cyberpunk',
+    url: 'synth:cyberpunk',
+    vibe: 'cyberpunk',
     coverUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&auto=format&fit=crop&q=80'
   },
   {
@@ -28,8 +32,11 @@ const DEFAULT_TRACKS: Track[] = [
     artist: 'Astra Philharmonic',
     album: 'Lands Between Chronicles',
     duration: 210,
+    durationSeconds: 210,
     source: 'synthesizer',
     filePath: 'synth:souls',
+    url: 'synth:souls',
+    vibe: 'souls-fantasy',
     coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80'
   },
   {
@@ -39,8 +46,11 @@ const DEFAULT_TRACKS: Track[] = [
     artist: 'Chilled Astra Beats',
     album: 'Rain & Holograms',
     duration: 195,
+    durationSeconds: 195,
     source: 'synthesizer',
     filePath: 'synth:lofi',
+    url: 'synth:lofi',
+    vibe: 'cozy-wholesome',
     coverUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&auto=format&fit=crop&q=80'
   },
   {
@@ -50,8 +60,11 @@ const DEFAULT_TRACKS: Track[] = [
     artist: 'Pixel Pulse Collective',
     album: 'Insert Coin Anthology',
     duration: 142,
+    durationSeconds: 142,
     source: 'synthesizer',
     filePath: 'synth:arcade',
+    url: 'synth:arcade',
+    vibe: 'retro-arcade',
     coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&auto=format&fit=crop&q=80'
   },
   {
@@ -61,8 +74,11 @@ const DEFAULT_TRACKS: Track[] = [
     artist: 'Astra Deep Space Observatory',
     album: 'Zero Gravity Solitude',
     duration: 240,
+    durationSeconds: 240,
     source: 'synthesizer',
     filePath: 'synth:space',
+    url: 'synth:space',
+    vibe: 'space-cosmic',
     coverUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&auto=format&fit=crop&q=80'
   }
 ];
@@ -73,12 +89,38 @@ export interface AudioServiceState {
   volume: number; // 0 to 1
   currentTime: number;
   duration: number;
+  durationSeconds?: number;
   isDucked: boolean;
   isLoFiRadio: boolean;
   playlist: Playlist;
+  shuffle: boolean;
+  repeat: 'off' | 'all' | 'one';
+  activeAmbientLayers: Set<AmbientLoFiLayer>;
+  visualizerMode: VisualizerMode;
 }
 
 export type AudioServiceListener = (state: AudioServiceState) => void;
+
+function normalizeAudioUrl(url: string): string {
+  if (!url) return '';
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('file://') ||
+    url.startsWith('blob:') ||
+    url.startsWith('data:')
+  ) {
+    return url;
+  }
+  const normalized = url.replace(/\\/g, '/');
+  if (/^[a-zA-Z]:\//.test(normalized)) {
+    return `file:///${normalized}`;
+  }
+  if (normalized.startsWith('/')) {
+    return `file://${normalized}`;
+  }
+  return `file:///${normalized}`;
+}
 
 class AudioServiceClass {
   private ctx: AudioContext | null = null;
@@ -88,25 +130,40 @@ class AudioServiceClass {
   private audioElement: HTMLAudioElement | null = null;
   private mediaSourceNode: MediaElementAudioSourceNode | null = null;
 
-  // Ambient synthesizer nodes for fallback / lo-fi radio mode
+  // Synthesizer nodes
   private synthGain: GainNode | null = null;
   private synthOscillators: OscillatorNode[] = [];
   private synthInterval: any = null;
 
+  // Ambient soundscape layers (rain / vinyl)
+  private rainGain: GainNode | null = null;
+  private rainSource: AudioBufferSourceNode | null = null;
+  private vinylGain: GainNode | null = null;
+  private vinylSource: AudioBufferSourceNode | null = null;
+
+  // Progress timer for synthesized tracks
+  private progressTimer: any = null;
+
   private listeners: Set<AudioServiceListener> = new Set();
+  private playSessionId: number = 0;
 
   private state: AudioServiceState = {
     currentTrack: null,
     isPlaying: false,
     volume: 0.8,
     currentTime: 0,
-    duration: 0,
+    duration: 184,
+    durationSeconds: 184,
     isDucked: false,
     isLoFiRadio: false,
+    shuffle: false,
+    repeat: 'all',
+    activeAmbientLayers: new Set<AmbientLoFiLayer>(),
+    visualizerMode: 'bars',
     playlist: {
       id: 'default-playlist',
       name: 'Astra Soundtracks & Beats',
-      tracks: DEFAULT_TRACKS,
+      tracks: [...DEFAULT_TRACKS],
       currentTrackIndex: 0
     }
   };
@@ -115,6 +172,16 @@ class AudioServiceClass {
 
   constructor() {
     this.loadPersistedPlaylist();
+    this.registerGlobalTeardown();
+  }
+
+  private registerGlobalTeardown() {
+    if (typeof window === 'undefined') return;
+    const teardown = () => {
+      this.stop();
+    };
+    window.addEventListener('beforeunload', teardown);
+    window.addEventListener('unload', teardown);
   }
 
   private loadPersistedPlaylist() {
@@ -126,7 +193,9 @@ class AudioServiceClass {
           this.state.playlist = parsed;
           const idx = Math.max(0, Math.min(parsed.currentTrackIndex || 0, parsed.tracks.length - 1));
           this.state.currentTrack = parsed.tracks[idx] || parsed.tracks[0];
-          this.state.duration = this.state.currentTrack?.duration || 0;
+          const trackDuration = this.state.currentTrack?.duration || this.state.currentTrack?.durationSeconds || 0;
+          this.state.duration = trackDuration;
+          this.state.durationSeconds = trackDuration;
           return;
         }
       }
@@ -136,6 +205,7 @@ class AudioServiceClass {
 
     this.state.currentTrack = DEFAULT_TRACKS[0];
     this.state.duration = DEFAULT_TRACKS[0].duration;
+    this.state.durationSeconds = DEFAULT_TRACKS[0].duration;
   }
 
   private persistPlaylist() {
@@ -149,7 +219,7 @@ class AudioServiceClass {
   private initAudio() {
     if (this.ctx) {
       if (this.ctx.state === 'suspended') {
-        this.ctx.resume();
+        this.ctx.resume().catch(() => {});
       }
       return;
     }
@@ -163,7 +233,7 @@ class AudioServiceClass {
     this.masterGain.gain.setValueAtTime(this.state.volume, this.ctx.currentTime);
 
     this.duckGain = this.ctx.createGain();
-    this.duckGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+    this.duckGain.gain.setValueAtTime(this.state.isDucked ? 0.3 : 1.0, this.ctx.currentTime);
 
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = this.config.fftSize;
@@ -171,14 +241,13 @@ class AudioServiceClass {
     this.analyser.minDecibels = this.config.minDecibels;
     this.analyser.maxDecibels = this.config.maxDecibels;
 
-    // Graph: AudioElement/Synth -> masterGain -> duckGain -> analyser -> destination
+    // Graph: sources -> masterGain -> duckGain -> analyser -> destination
     this.masterGain.connect(this.duckGain);
     this.duckGain.connect(this.analyser);
     this.analyser.connect(this.ctx.destination);
 
-    // Audio Element setup
+    // Audio Element setup - single singleton instance
     this.audioElement = new Audio();
-    this.audioElement.crossOrigin = 'anonymous';
 
     try {
       this.mediaSourceNode = this.ctx.createMediaElementSource(this.audioElement);
@@ -188,22 +257,25 @@ class AudioServiceClass {
     }
 
     this.audioElement.addEventListener('timeupdate', () => {
-      if (!this.audioElement) return;
+      if (!this.audioElement || !this.state.isPlaying) return;
       this.state.currentTime = Math.floor(this.audioElement.currentTime);
       if (this.audioElement.duration && !isNaN(this.audioElement.duration)) {
-        this.state.duration = Math.floor(this.audioElement.duration);
+        const dur = Math.floor(this.audioElement.duration);
+        this.state.duration = dur;
+        this.state.durationSeconds = dur;
       }
       this.emit();
     });
 
     this.audioElement.addEventListener('ended', () => {
-      this.next();
+      this.handleTrackEnded();
     });
 
     this.audioElement.addEventListener('error', () => {
-      // Fallback to synthesizer mode if local/external audio fails
+      // Fallback to synthesizer mode if audio element fails to load/decode
       if (this.state.isPlaying && this.state.currentTrack) {
-        this.startSynthesizerVibe(this.state.currentTrack.gameId || 'lofi');
+        console.warn('[AudioService] Audio file error, falling back to synth');
+        this.startSynthesizerVibe(this.state.currentTrack.vibe || this.state.currentTrack.gameId || 'lofi');
       }
     });
   }
@@ -214,7 +286,7 @@ class AudioServiceClass {
   }
 
   public getFrequencyData(array: Uint8Array): void {
-    if (this.analyser) {
+    if (this.analyser && this.state.isPlaying) {
       this.analyser.getByteFrequencyData(array as any);
     } else {
       array.fill(0);
@@ -222,7 +294,7 @@ class AudioServiceClass {
   }
 
   public getTimeDomainData(array: Uint8Array): void {
-    if (this.analyser) {
+    if (this.analyser && this.state.isPlaying) {
       this.analyser.getByteTimeDomainData(array as any);
     } else {
       array.fill(128);
@@ -230,24 +302,50 @@ class AudioServiceClass {
   }
 
   public getState(): AudioServiceState {
-    return { ...this.state };
+    return {
+      ...this.state,
+      activeAmbientLayers: new Set(this.state.activeAmbientLayers)
+    };
   }
 
   public subscribe(listener: AudioServiceListener): () => void {
     this.listeners.add(listener);
-    listener({ ...this.state });
+    listener(this.getState());
     return () => this.listeners.delete(listener);
   }
 
   private emit() {
-    const s = { ...this.state };
+    const s = this.getState();
     this.listeners.forEach((l) => l(s));
+  }
+
+  /**
+   * Stop all active audio output completely and release resources
+   */
+  public stop(): void {
+    this.playSessionId++;
+    this.state.isPlaying = false;
+    this.state.currentTime = 0;
+    this.stopAudioElement(true);
+    this.stopSynthesizer();
+    this.stopAmbientLayers();
+    this.stopProgressTimer();
+    this.emit();
+  }
+
+  public pause(): void {
+    this.playSessionId++;
+    this.state.isPlaying = false;
+    this.stopAudioElement(false);
+    this.stopSynthesizer();
+    this.stopProgressTimer();
+    this.emit();
   }
 
   public async play(): Promise<void> {
     this.initAudio();
     if (this.ctx?.state === 'suspended') {
-      await this.ctx.resume();
+      await this.ctx.resume().catch(() => {});
     }
 
     if (!this.state.currentTrack && this.state.playlist.tracks.length > 0) {
@@ -256,47 +354,31 @@ class AudioServiceClass {
 
     if (!this.state.currentTrack) return;
 
+    // Increment session id so any concurrent or scheduled playback cancels
+    const currentSession = ++this.playSessionId;
+
+    // Fully tear down any current playback before starting
+    this.stopAudioElement(true);
+    this.stopSynthesizer();
+    this.stopProgressTimer();
+
     this.state.isPlaying = true;
     const track = this.state.currentTrack;
+    const rawPath = track.filePath || track.url || '';
 
-    if (track.source === 'synthesizer' || track.filePath?.startsWith('synth:') || !track.filePath) {
-      this.stopAudioElement();
-      this.startSynthesizerVibe(track.gameId || 'lofi');
+    const isSynth =
+      track.source === 'synthesizer' ||
+      rawPath.startsWith('synth:') ||
+      !rawPath;
+
+    if (isSynth) {
+      this.startSynthesizerVibe(track.vibe || track.gameId || 'lofi');
+      this.startProgressTimer();
     } else {
-      this.stopSynthesizer();
-      this.playAudioFile(track.filePath);
+      this.playAudioFile(rawPath, currentSession);
     }
 
-    this.emit();
-  }
-
-  private playAudioFile(filePath: string) {
-    if (!this.audioElement) return;
-    let url = filePath;
-    if (url.startsWith('file://') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
-      // standard url
-    } else {
-      const normalized = filePath.replace(/\\/g, '/');
-      url = /^[a-zA-Z]:\//.test(normalized) ? `file:///${normalized}` : `file://${normalized}`;
-    }
-
-    this.audioElement.src = url;
-    this.audioElement.play().catch((err) => {
-      console.warn('[AudioService] Playback failed, falling back to ambient synth:', err);
-      this.startSynthesizerVibe(this.state.currentTrack?.gameId || 'lofi');
-    });
-  }
-
-  private stopAudioElement() {
-    if (this.audioElement) {
-      this.audioElement.pause();
-    }
-  }
-
-  public pause(): void {
-    this.state.isPlaying = false;
-    this.stopAudioElement();
-    this.stopSynthesizer();
+    this.updateAmbientLayers();
     this.emit();
   }
 
@@ -308,9 +390,93 @@ class AudioServiceClass {
     }
   }
 
+  private playAudioFile(filePath: string, sessionId: number) {
+    if (!this.audioElement) return;
+
+    const url = normalizeAudioUrl(filePath);
+    if (url.startsWith('file://')) {
+      this.audioElement.removeAttribute('crossorigin');
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+      this.audioElement.crossOrigin = 'anonymous';
+    }
+
+    this.audioElement.src = url;
+    this.audioElement.currentTime = 0;
+
+    this.audioElement
+      .play()
+      .then(() => {
+        // If playback was stopped while promise was pending, pause immediately
+        if (this.playSessionId !== sessionId || !this.state.isPlaying) {
+          if (this.audioElement) {
+            this.audioElement.pause();
+            this.audioElement.removeAttribute('src');
+            this.audioElement.load();
+          }
+        }
+      })
+      .catch((err) => {
+        if (this.playSessionId === sessionId && this.state.isPlaying) {
+          console.warn('[AudioService] Playback failed, falling back to ambient synth:', err);
+          this.startSynthesizerVibe(this.state.currentTrack?.vibe || this.state.currentTrack?.gameId || 'lofi');
+          this.startProgressTimer();
+          this.emit();
+        }
+      });
+  }
+
+  private stopAudioElement(resetSrc = true) {
+    if (this.audioElement) {
+      try {
+        this.audioElement.pause();
+        if (resetSrc) {
+          this.audioElement.currentTime = 0;
+          this.audioElement.removeAttribute('src');
+          this.audioElement.load();
+        }
+      } catch {}
+    }
+  }
+
+  private startProgressTimer() {
+    this.stopProgressTimer();
+    this.progressTimer = setInterval(() => {
+      if (this.state.isPlaying) {
+        this.state.currentTime += 1;
+        if (this.state.duration > 0 && this.state.currentTime >= this.state.duration) {
+          this.handleTrackEnded();
+        } else {
+          this.emit();
+        }
+      }
+    }, 1000);
+  }
+
+  private stopProgressTimer() {
+    if (this.progressTimer) {
+      clearInterval(this.progressTimer);
+      this.progressTimer = null;
+    }
+  }
+
+  private handleTrackEnded() {
+    if (this.state.repeat === 'one' && this.state.currentTrack) {
+      this.play();
+    } else if (this.state.repeat === 'all' || this.state.shuffle) {
+      this.next();
+    } else {
+      this.stop();
+    }
+  }
+
   public next(): void {
     const list = this.state.playlist.tracks;
     if (list.length === 0) return;
+    if (this.state.shuffle) {
+      const randIdx = Math.floor(Math.random() * list.length);
+      this.selectTrackByIndex(randIdx);
+      return;
+    }
     const nextIdx = (this.state.playlist.currentTrackIndex + 1) % list.length;
     this.selectTrackByIndex(nextIdx);
   }
@@ -327,7 +493,6 @@ class AudioServiceClass {
     if (idx !== -1) {
       this.selectTrackByIndex(idx);
     } else {
-      // Add track to playlist then select
       this.addTrack(track, true);
     }
   }
@@ -338,7 +503,9 @@ class AudioServiceClass {
 
     this.state.playlist.currentTrackIndex = index;
     this.state.currentTrack = list[index];
-    this.state.duration = list[index].duration || 0;
+    const dur = list[index].duration || list[index].durationSeconds || 0;
+    this.state.duration = dur;
+    this.state.durationSeconds = dur;
     this.state.currentTime = 0;
     this.persistPlaylist();
 
@@ -346,6 +513,19 @@ class AudioServiceClass {
       this.play();
     } else {
       this.emit();
+    }
+  }
+
+  public playTrack(trackId: string): void {
+    const idx = this.state.playlist.tracks.findIndex((t) => t.id === trackId);
+    if (idx !== -1) {
+      this.selectTrackByIndex(idx);
+      this.play();
+    } else {
+      const defaultTrack = DEFAULT_TRACKS.find((t) => t.id === trackId);
+      if (defaultTrack) {
+        this.addTrack(defaultTrack, true);
+      }
     }
   }
 
@@ -379,7 +559,7 @@ class AudioServiceClass {
       if (this.state.isPlaying && this.state.currentTrack) {
         this.play();
       } else if (!this.state.currentTrack) {
-        this.pause();
+        this.stop();
       }
     }
     this.persistPlaylist();
@@ -403,6 +583,53 @@ class AudioServiceClass {
     this.emit();
   }
 
+  public setVisualizerMode(mode: VisualizerMode): void {
+    this.state.visualizerMode = mode;
+    this.emit();
+  }
+
+  public toggleShuffle(): void {
+    this.state.shuffle = !this.state.shuffle;
+    this.emit();
+  }
+
+  public toggleRepeat(): void {
+    const modes: ('off' | 'all' | 'one')[] = ['off', 'all', 'one'];
+    const curIdx = modes.indexOf(this.state.repeat);
+    this.state.repeat = modes[(curIdx + 1) % modes.length];
+    this.emit();
+  }
+
+  public toggleAmbientLayer(layer: AmbientLoFiLayer): void {
+    this.initAudio();
+    if (this.state.activeAmbientLayers.has(layer)) {
+      this.state.activeAmbientLayers.delete(layer);
+    } else {
+      this.state.activeAmbientLayers.add(layer);
+    }
+    this.updateAmbientLayers();
+    this.emit();
+  }
+
+  public addLocalTrack(fileUrl: string, title: string, artist = 'Local Artist'): void {
+    const newTrack: Track = {
+      id: `local_${Date.now()}`,
+      title,
+      gameId: 'local-library',
+      artist,
+      duration: 210,
+      durationSeconds: 210,
+      filePath: fileUrl,
+      url: fileUrl,
+      source: 'local',
+      vibe: 'modern-cinematic'
+    };
+    this.state.playlist.tracks.unshift(newTrack);
+    this.persistPlaylist();
+    this.selectTrackByIndex(0);
+    this.play();
+  }
+
   public toggleLoFiRadio(): void {
     this.state.isLoFiRadio = !this.state.isLoFiRadio;
     if (this.state.isLoFiRadio) {
@@ -413,8 +640,11 @@ class AudioServiceClass {
         artist: 'Astra Chill Network',
         album: 'Endless Horizons',
         duration: 9999,
+        durationSeconds: 9999,
         source: 'radio',
         filePath: 'synth:lofi',
+        url: 'synth:lofi',
+        vibe: 'cozy-wholesome',
         coverUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&auto=format&fit=crop&q=80'
       };
       this.addTrack(radioTrack, true);
@@ -423,9 +653,6 @@ class AudioServiceClass {
     }
   }
 
-  /**
-   * Auto-duck volume when game launches (reduce to 30%)
-   */
   public duckVolume(): void {
     this.initAudio();
     this.state.isDucked = true;
@@ -436,9 +663,6 @@ class AudioServiceClass {
     this.emit();
   }
 
-  /**
-   * Restore volume when game closes
-   */
   public restoreVolume(): void {
     this.initAudio();
     this.state.isDucked = false;
@@ -447,6 +671,28 @@ class AudioServiceClass {
       this.duckGain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 0.8);
     }
     this.emit();
+  }
+
+  public getTracks(): JukeboxTrack[] {
+    return this.state.playlist.tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist || 'Astra Sound Labs',
+      album: t.album,
+      durationSeconds: t.duration || t.durationSeconds || 180,
+      url: t.filePath || t.url || '',
+      source: t.source || 'synthesizer',
+      vibe: (t.vibe as any) || 'modern-cinematic',
+      coverUrl: t.coverUrl
+    }));
+  }
+
+  public prevTrack(): void {
+    this.previous();
+  }
+
+  public nextTrack(): void {
+    this.next();
   }
 
   /**
@@ -460,49 +706,80 @@ class AudioServiceClass {
     this.synthGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
     this.synthGain.connect(this.masterGain);
 
-    const baseFrequencies = vibe.includes('cyber')
-      ? [110, 164.81, 220, 329.63]
-      : vibe.includes('soul') || vibe.includes('fantasy')
-      ? [65.41, 130.81, 196.0, 261.63]
-      : [130.81, 164.81, 196.0, 246.94]; // Lofi major 7th chords
+    let chords: number[][] = [];
+    let bpm = 90;
+    let waveType: OscillatorType = 'sine';
 
-    this.synthOscillators = baseFrequencies.map((freq, idx) => {
-      const osc = this.ctx!.createOscillator();
-      const panner = typeof this.ctx?.createStereoPanner === 'function' ? this.ctx.createStereoPanner() : null;
-      const filter = this.ctx!.createBiquadFilter();
+    if (vibe.includes('cyber')) {
+      chords = [
+        [110, 164.81, 220, 329.63],
+        [130.81, 196, 261.63, 392],
+        [98, 146.83, 196, 293.66],
+        [87.31, 130.81, 174.61, 261.63]
+      ];
+      bpm = 110;
+      waveType = 'sawtooth';
+    } else if (vibe.includes('soul') || vibe.includes('fantasy')) {
+      chords = [
+        [146.83, 220, 293.66, 440],
+        [110, 164.81, 220, 329.63],
+        [123.47, 185, 246.94, 370],
+        [98, 146.83, 196, 293.66]
+      ];
+      bpm = 68;
+      waveType = 'triangle';
+    } else if (vibe.includes('arcade')) {
+      chords = [
+        [261.63, 329.63, 392, 523.25],
+        [220, 261.63, 329.63, 440],
+        [174.61, 220, 261.63, 349.23],
+        [196, 246.94, 293.66, 392]
+      ];
+      bpm = 128;
+      waveType = 'square';
+    } else {
+      // Lo-fi & Space ambient
+      chords = [
+        [130.81, 164.81, 196, 246.94, 329.63],
+        [110, 146.83, 174.61, 220, 293.66],
+        [98, 130.81, 164.81, 196, 246.94],
+        [87.31, 130.81, 164.81, 196, 261.63]
+      ];
+      bpm = 74;
+      waveType = 'sine';
+    }
 
-      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(freq, this.ctx!.currentTime);
+    let chordStep = 0;
+    const playChord = () => {
+      if (!this.ctx || !this.synthGain || !this.state.isPlaying) return;
+      const currentChord = chords[chordStep % chords.length];
+      chordStep++;
 
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(600 + idx * 200, this.ctx!.currentTime);
+      currentChord.forEach((freq, idx) => {
+        if (!this.ctx || !this.synthGain) return;
+        const osc = this.ctx.createOscillator();
+        const noteGain = this.ctx.createGain();
 
-      if (panner) {
-        panner.pan.setValueAtTime((idx / baseFrequencies.length) * 2 - 1, this.ctx!.currentTime);
-        osc.connect(filter);
-        filter.connect(panner);
-        panner.connect(this.synthGain!);
-      } else {
-        osc.connect(filter);
-        filter.connect(this.synthGain!);
-      }
+        osc.type = waveType;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
-      osc.start();
-      return osc;
-    });
+        const duration = (60 / bpm) * 3.8;
+        noteGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        noteGain.gain.linearRampToValueAtTime(0.08 / (idx + 1), this.ctx.currentTime + 0.6);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
 
-    let currentChordIndex = 0;
-    this.synthInterval = setInterval(() => {
-      if (!this.ctx || this.synthOscillators.length === 0) return;
-      currentChordIndex = (currentChordIndex + 1) % 4;
-      const mod = [1, 1.125, 1.25, 1.333][currentChordIndex];
-      this.synthOscillators.forEach((osc, i) => {
-        const base = baseFrequencies[i] || 110;
-        try {
-          osc.frequency.setTargetAtTime(base * mod, this.ctx!.currentTime, 1.2);
-        } catch {}
+        osc.connect(noteGain);
+        noteGain.connect(this.synthGain);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+        this.synthOscillators.push(osc);
       });
-    }, 4000);
+    };
+
+    playChord();
+    const intervalMs = (60 / bpm) * 4000;
+    this.synthInterval = setInterval(playChord, intervalMs);
   }
 
   private stopSynthesizer(): void {
@@ -523,6 +800,99 @@ class AudioServiceClass {
       } catch {}
       this.synthGain = null;
     }
+  }
+
+  private updateAmbientLayers() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // Vinyl crackle simulation
+    if (this.state.activeAmbientLayers.has('vinyl')) {
+      if (!this.vinylGain) {
+        this.vinylGain = this.ctx.createGain();
+        this.vinylGain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+        this.vinylGain.connect(this.masterGain);
+
+        const bufferSize = this.ctx.sampleRate * 2;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() > 0.985 ? (Math.random() * 2 - 1) * 0.4 : (Math.random() * 2 - 1) * 0.02;
+        }
+        this.vinylSource = this.ctx.createBufferSource();
+        this.vinylSource.buffer = buffer;
+        this.vinylSource.loop = true;
+        this.vinylSource.connect(this.vinylGain);
+        this.vinylSource.start();
+      }
+    } else {
+      this.stopVinylLayer();
+    }
+
+    // Rain ambient simulation
+    if (this.state.activeAmbientLayers.has('rain')) {
+      if (!this.rainGain) {
+        this.rainGain = this.ctx.createGain();
+        this.rainGain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+
+        this.rainGain.connect(filter);
+        filter.connect(this.masterGain);
+
+        const bufferSize = this.ctx.sampleRate * 2;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        this.rainSource = this.ctx.createBufferSource();
+        this.rainSource.buffer = buffer;
+        this.rainSource.loop = true;
+        this.rainSource.connect(this.rainGain);
+        this.rainSource.start();
+      }
+    } else {
+      this.stopRainLayer();
+    }
+  }
+
+  private stopVinylLayer() {
+    if (this.vinylSource) {
+      try {
+        this.vinylSource.stop();
+        this.vinylSource.disconnect();
+      } catch {}
+      this.vinylSource = null;
+    }
+    if (this.vinylGain) {
+      try {
+        this.vinylGain.disconnect();
+      } catch {}
+      this.vinylGain = null;
+    }
+  }
+
+  private stopRainLayer() {
+    if (this.rainSource) {
+      try {
+        this.rainSource.stop();
+        this.rainSource.disconnect();
+      } catch {}
+      this.rainSource = null;
+    }
+    if (this.rainGain) {
+      try {
+        this.rainGain.disconnect();
+      } catch {}
+      this.rainGain = null;
+    }
+  }
+
+  private stopAmbientLayers() {
+    this.stopVinylLayer();
+    this.stopRainLayer();
   }
 }
 
